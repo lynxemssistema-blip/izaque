@@ -37,7 +37,8 @@ COPY backend/ ./backend/
 # Copia o build estático do frontend compilado no estágio 1
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
 
-# Expõe a porta 3001 para o Easypanel
+# Expõe as portas 80 e 3001 para o Easypanel/Traefik
+EXPOSE 80
 EXPOSE 3001
 
 # Inicia o servidor orquestrador Hermes

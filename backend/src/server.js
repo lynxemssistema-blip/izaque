@@ -72,3 +72,18 @@ app.listen(PORT, () => {
   console.log(`📡 [Health Check] Acesse http://localhost:${PORT}/health`);
   console.log(`====================================================`);
 });
+
+// Compatibilidade direta com o roteador padrão do Easypanel/Traefik (Porta 80)
+if (Number(PORT) !== 80) {
+  try {
+    const secondaryServer = app.listen(80, () => {
+      console.log(`🌐 [Easypanel/Traefik] Listener ativo na porta 80 para roteamento direto`);
+    });
+    secondaryServer.on('error', (err) => {
+      // Em ambientes de desenvolvimento locais sem privilégios de administrador/root, ignora
+      console.log(`ℹ️ [Port 80 fallback] Ignorado em dev local: ${err.message}`);
+    });
+  } catch (err) {
+    // Ignora em caso de restrição de permissão local
+  }
+}
