@@ -273,9 +273,12 @@ export async function handleChatMessage(req, res) {
 
     // Salva mensagem de texto no banco de dados (histórico em izaque_messages)
     try {
+      const isAgentUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedAgent?.id || '');
+      const safeAgentId = isAgentUuid ? selectedAgent.id : null;
+
       await supabaseAdmin.from('izaque_messages').insert([
-        { user_id: userId, agent_id: selectedAgent.id, role: 'user', content: message, is_audio: false },
-        { user_id: userId, agent_id: selectedAgent.id, role: 'assistant', content: reply, is_audio: false },
+        { user_id: userId, agent_id: safeAgentId, role: 'user', content: message, is_audio: false },
+        { user_id: userId, agent_id: safeAgentId, role: 'assistant', content: reply, is_audio: false },
       ]);
     } catch (dbErr) {
       console.warn('⚠️ Aviso ao persistir mensagens em izaque_messages:', dbErr.message);
@@ -351,10 +354,13 @@ export async function handleAudioChatMessage(req, res) {
     });
 
     // 3. SALVAR A TRANSCRIÇÃO E A RESPOSTA NO BANCO DE DADOS
+    const isAgentUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedAgent?.id || '');
+    const safeAgentId = isAgentUuid ? selectedAgent.id : null;
+
     const { error: msgErr } = await supabaseAdmin.from('izaque_messages').insert([
       {
         user_id: userId,
-        agent_id: selectedAgent.id,
+        agent_id: safeAgentId,
         role: 'user',
         content: transcription,
         is_audio: true,
@@ -362,7 +368,7 @@ export async function handleAudioChatMessage(req, res) {
       },
       {
         user_id: userId,
-        agent_id: selectedAgent.id,
+        agent_id: safeAgentId,
         role: 'assistant',
         content: reply,
         is_audio: false,
