@@ -49,9 +49,5 @@ COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
 # Expõe apenas a porta 3001 (o Easypanel/Traefik faz o roteamento HTTP/HTTPS externo)
 EXPOSE 3001
 
-# Health check nativo do Docker para o Easypanel monitorar o status do container
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3001/health || exit 1
-
 # Inicia o servidor orquestrador Hermes
 CMD ["node", "backend/src/server.js"]
