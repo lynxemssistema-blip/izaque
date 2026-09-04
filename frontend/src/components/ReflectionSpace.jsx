@@ -160,21 +160,28 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       return;
     }
 
+    let isMounted = true;
     const loadPersistedHistory = async () => {
       try {
         setLoadingHistory(true);
         const historyData = await fetchChatHistory(user.id);
-        if (historyData && historyData.length > 0) {
+        if (isMounted && historyData && historyData.length > 0) {
           setReflections(historyData);
         }
       } catch (err) {
-        console.error('Erro ao carregar histórico persistido:', err);
+        console.warn('Histórico persistido indisponível no momento:', err?.message);
       } finally {
-        setLoadingHistory(false);
+        if (isMounted) {
+          setLoadingHistory(false);
+        }
       }
     };
 
     loadPersistedHistory();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user?.id]);
 
   // Estado de Reprodução de Voz

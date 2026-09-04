@@ -155,10 +155,13 @@ export async function fetchChatHistory(userId) {
   try {
     if (!userId) return [];
     const response = await fetch(`${BACKEND_URL}/api/chat/history/${userId}`);
-    if (!response.ok) throw new Error('Falha ao carregar histórico de conversas');
+    if (!response.ok) {
+      console.warn(`⚠️ [ChatHistory] Status ${response.status} ao buscar histórico remoto`);
+      return [];
+    }
     return await response.json();
   } catch (error) {
-    console.error('❌ Erro ao buscar histórico de conversas:', error);
+    console.warn('⚠️ [ChatHistory] Histórico remoto temporariamente indisponível:', error?.message);
     return [];
   }
 }

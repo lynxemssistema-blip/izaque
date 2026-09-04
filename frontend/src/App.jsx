@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './services/supabase';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
@@ -57,12 +57,18 @@ export default function App() {
     }
   };
 
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
   useEffect(() => {
     // 1. Obter sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserProfile(session.user);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        loadUserProfile(currentUser);
         // REQUISITO: Usuário autenticado já abre direto na página de conversa com IZAQUE
         setActiveTab('chat');
         // Verifica se é o primeiro acesso para exibir o onboarding
@@ -89,14 +95,14 @@ export default function App() {
         }
       } else {
         setProfile(null);
-        if (activeTab === 'chat' || activeTab === 'admin') {
+        if (activeTabRef.current === 'chat' || activeTabRef.current === 'admin') {
           setActiveTab('landing');
         }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [activeTab]);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
