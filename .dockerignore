@@ -1,8 +1,34 @@
+# Dependências — nunca copiar, o npm install roda dentro do container
 node_modules
-.git
-.vscode
+*/node_modules
+
+# Builds anteriores — o Dockerfile faz o build dentro do container
 dist
-.env.local
+*/dist
+frontend/dist
+
+# Segredos — NUNCA dentro da imagem Docker
 .env
+*.env
+.env.local
+.env.*.local
 backend/.env
 frontend/.env
+
+# Git e IDEs
+.git
+.gitignore
+.vscode
+.idea
+
+# Scripts e configs de desenvolvimento local
+start-dev.js
+
+# Arquivos do agente/customizações locais
+.agents/
+skills-lock.json
+zone_backup.json
+
+# Logs
+*.log
+npm-debug.log*

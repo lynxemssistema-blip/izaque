@@ -402,10 +402,8 @@ export async function uploadUserAvatar(userId, file) {
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}_${Date.now()}.${fileExt}`;
-    
-    // Importação dinâmica do supabase client
-    const { supabase } = await import('./supabase.js');
-    
+
+    // Usa o import estático do topo do arquivo (evita aviso de chunk conflitante no Vite)
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(fileName, file, {

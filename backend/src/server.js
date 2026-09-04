@@ -65,25 +65,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Erro interno no servidor IZAQUE API.' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
   console.log(`🚀 [IZAQUE API] Servidor ativo na porta ${PORT}`);
   console.log(`🧠 [RAG Memory] Pronto para gerenciar memórias com Supabase e Gemini`);
   console.log(`📡 [Health Check] Acesse http://localhost:${PORT}/health`);
+  console.log(`🌐 [Modo] ${process.env.NODE_ENV || 'development'}`);
   console.log(`====================================================`);
 });
-
-// Compatibilidade direta com o roteador padrão do Easypanel/Traefik (Porta 80)
-if (Number(PORT) !== 80) {
-  try {
-    const secondaryServer = app.listen(80, () => {
-      console.log(`🌐 [Easypanel/Traefik] Listener ativo na porta 80 para roteamento direto`);
-    });
-    secondaryServer.on('error', (err) => {
-      // Em ambientes de desenvolvimento locais sem privilégios de administrador/root, ignora
-      console.log(`ℹ️ [Port 80 fallback] Ignorado em dev local: ${err.message}`);
-    });
-  } catch (err) {
-    // Ignora em caso de restrição de permissão local
-  }
-}

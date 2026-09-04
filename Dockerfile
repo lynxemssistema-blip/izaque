@@ -9,25 +9,34 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /build/frontend
 
+# Define VITE_BACKEND_URL vazio para garantir rotas relativas (/api/...)
+# no monólito Docker — sem CORS, sem porta fixa hardcoded
+ARG VITE_BACKEND_URL=""
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+
 # Cache de dependências do frontend
 COPY frontend/package*.json ./
 RUN npm ci || npm install
 
-# Build da aplicação React
+# Copia código-fonte do frontend e faz o build de produção
 COPY frontend/ ./
 RUN npm run build
 
-# ESTÁGIO 2: Backend Node.js de Produção
+# =====================================================
+# ESTÁGIO 2: Backend Node.js de Produção (Imagem Final)
+# =====================================================
 FROM node:20-alpine
 
 WORKDIR /app
 
 # Variáveis de ambiente padrão para Produção
+# (As sensíveis — GEMINI_API_KEY, SUPABASE_SERVICE_ROLE_KEY — devem ser definidas
+#  no painel de Environment Variables do Easypanel, NUNCA aqui no Dockerfile)
 ENV NODE_ENV=production
 ENV PORT=3001
 ENV CORS_ORIGIN=*
 
-# Instala dependências de produção do backend
+# Instala apenas as dependências de produção do backend
 COPY backend/package*.json ./backend/
 RUN cd backend && (npm ci --omit=dev || npm install --omit=dev)
 
@@ -37,9 +46,12 @@ COPY backend/ ./backend/
 # Copia o build estático do frontend compilado no estágio 1
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
 
-# Expõe as portas 80 e 3001 para o Easypanel/Traefik
-EXPOSE 80
+# Expõe apenas a porta 3001 (o Easypanel/Traefik faz o roteamento HTTP/HTTPS externo)
 EXPOSE 3001
+
+# Health check nativo do Docker para o Easypanel monitorar o status do container
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3001/health || exit 1
 
 # Inicia o servidor orquestrador Hermes
 CMD ["node", "backend/src/server.js"]
