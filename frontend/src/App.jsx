@@ -131,7 +131,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-slate-900 text-stone-800 dark:text-stone-100 flex flex-col font-sans selection:bg-teal-700/20 selection:text-teal-900 dark:selection:text-teal-200 transition-colors duration-300">
+    <div
+      className={`bg-stone-50 dark:bg-slate-900 text-stone-800 dark:text-stone-100 flex flex-col font-sans selection:bg-teal-700/20 selection:text-teal-900 dark:selection:text-teal-200 transition-colors duration-300 ${
+        activeTab === 'chat' ? 'h-[100dvh] max-h-[100dvh] overflow-hidden' : 'min-h-screen'
+      }`}
+    >
       {/* ONBOARDING DO GUIA (Primeiro Acesso) */}
       {showOnboarding && (
         <WelcomeOnboarding
@@ -140,26 +144,28 @@ export default function App() {
         />
       )}
 
-      {/* NAVBAR DO SANTUÁRIO */}
-      <Navbar
-        user={user}
-        profile={profile}
-        activeTab={activeTab}
-        setActiveTab={(tab) => {
-          if ((tab === 'chat' || tab === 'admin') && !user) {
-            setIsAuthOpen(true);
-            return;
-          }
-          setActiveTab(tab);
-        }}
-        onOpenAuth={() => setIsAuthOpen(true)}
-        onLogout={handleLogout}
-        onOpenOnboarding={() => setShowOnboarding(true)}
-        onOpenProfile={() => setIsProfileOpen(true)}
-      />
+      {/* NAVBAR DO SANTUÁRIO - No celular esconde durante o chat para evitar cabeçalho duplo e ganhar espaço */}
+      <div className={activeTab === 'chat' ? 'hidden md:block shrink-0' : 'shrink-0'}>
+        <Navbar
+          user={user}
+          profile={profile}
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            if ((tab === 'chat' || tab === 'admin') && !user) {
+              setIsAuthOpen(true);
+              return;
+            }
+            setActiveTab(tab);
+          }}
+          onOpenAuth={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+          onOpenOnboarding={() => setShowOnboarding(true)}
+          onOpenProfile={() => setIsProfileOpen(true)}
+        />
+      </div>
 
       {/* ROTEAMENTO PRINCIPAL */}
-      <main className="flex-1 flex flex-col">
+      <main className={`flex-1 flex flex-col ${activeTab === 'chat' ? 'min-h-0 overflow-hidden' : ''}`}>
         {activeTab === 'landing' && (
           <LandingPage onStartChat={handleStartChat} user={user} />
         )}
@@ -170,6 +176,7 @@ export default function App() {
               <ReflectionSpace
                 user={profile || user}
                 onEditGuideName={() => setShowOnboarding(true)}
+                onBackToHome={() => setActiveTab('landing')}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center p-6 text-center">

@@ -13,7 +13,11 @@ export default function MobileBottomNav({
   const guideName = localStorage.getItem('izaque_guide_name') || 'IZAQUE';
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-stone-200/80 dark:border-slate-800 pb-safe pt-1 px-2 shadow-2xl transition-colors">
+    <nav
+      className={`md:hidden z-30 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-stone-200/80 dark:border-slate-800 pb-safe pt-1 px-2 shadow-xl transition-colors ${
+        activeTab === 'chat' ? 'w-full shrink-0 relative' : 'fixed bottom-0 left-0 right-0'
+      }`}
+    >
       <div className="flex items-center justify-around max-w-lg mx-auto py-1">
         {/* INÍCIO */}
         <button

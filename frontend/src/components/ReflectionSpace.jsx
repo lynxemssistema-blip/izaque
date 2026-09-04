@@ -22,6 +22,7 @@ import {
   Moon,
   Coffee,
   Loader2,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   sendChatMessage,
@@ -131,7 +132,7 @@ function VoiceReflectionButton({ text, messageId, isPlaying, isAudioLoading, onT
   );
 }
 
-export default function ReflectionSpace({ user, onEditGuideName }) {
+export default function ReflectionSpace({ user, onEditGuideName, onBackToHome }) {
   const [guideName, setGuideName] = useState(() => {
     return localStorage.getItem('izaque_guide_name') || 'Izaque';
   });
@@ -500,7 +501,7 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
   };
 
   return (
-    <div className="flex flex-col h-ios-dvh max-w-4xl mx-auto bg-stone-50 dark:bg-slate-900 sm:border-x border-stone-200/80 dark:border-slate-800 transition-colors duration-300 font-sans text-stone-800 dark:text-stone-100 overflow-hidden">
+    <div className="flex flex-col h-full flex-1 w-full max-w-4xl mx-auto bg-stone-50 dark:bg-slate-900 sm:border-x border-stone-200/80 dark:border-slate-800 transition-colors duration-300 font-sans text-stone-800 dark:text-stone-100 overflow-hidden">
       {/* MODAL DE CONFIGURAÇÕES DE USUÁRIO */}
       <UserSettingsModal
         isOpen={isSettingsOpen}
@@ -509,16 +510,26 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
       />
 
       {/* HEADER DA SESSÃO */}
-      <header className="px-4 sm:px-6 py-3 sm:py-3.5 pt-safe border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shrink-0">
+      <header className="px-3 sm:px-6 py-2.5 sm:py-3.5 pt-safe border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {onBackToHome && (
+            <button
+              type="button"
+              onClick={onBackToHome}
+              title="Voltar para o Início"
+              className="md:hidden p-1.5 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 rounded-xl hover:bg-stone-200/50 dark:hover:bg-slate-800 transition"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shrink-0">
             <Feather className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-serif font-medium text-stone-900 dark:text-stone-50">
+            <h2 className="text-sm sm:text-base font-serif font-medium text-stone-900 dark:text-stone-50 leading-tight">
               Sessão com {guideName}
             </h2>
-            <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
+            <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400" />
               Santuário ativo • Escuta compassiva
             </p>
@@ -664,8 +675,8 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
         <div ref={endRef} />
       </main>
 
-      {/* FOOTER DE ENTRADA COM ESPAÇAMENTO RESPONSIVO PARA O MENU INFERIOR MOBILE */}
-      <footer className="p-3 sm:p-4 pb-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] md:pb-safe border-t border-stone-200/80 dark:border-slate-800 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
+      {/* FOOTER DE ENTRADA RESPONSIVO */}
+      <footer className="p-2.5 sm:p-4 border-t border-stone-200/80 dark:border-slate-800 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
         {isRecording ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
