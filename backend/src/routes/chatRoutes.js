@@ -7,8 +7,13 @@ import {
   clearChatHistory,
 } from '../controllers/chatController.js';
 import { handleGenerateVoice } from '../controllers/voiceController.js';
+import { getProfile, updateProfile } from '../controllers/profileController.js';
 
 const router = Router();
+
+// Perfil do Usuário (Visualização e Edição de Nome, Foto e WhatsApp)
+router.get('/profile/:userId', getProfile);
+router.put('/profile/:userId', updateProfile);
 
 // Listar agentes ativos para o seletor do chat
 router.get('/agents', getActiveAgents);

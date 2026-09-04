@@ -1,6 +1,6 @@
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL !== undefined && import.meta.env.VITE_BACKEND_URL !== '')
-  ? import.meta.env.VITE_BACKEND_URL
-  : (import.meta.env.PROD ? '' : 'http://localhost:3001');
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim() !== '')
+  ? import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')
+  : '';
 
 export async function fetchAdminMetrics() {
   const res = await fetch(`${BACKEND_URL}/api/admin/metrics`);

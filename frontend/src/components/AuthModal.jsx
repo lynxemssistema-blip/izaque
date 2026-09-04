@@ -46,11 +46,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  const handleQuickSuperAdmin = () => {
-    setEmail('edsonmanoel2012@gmail.com');
-    setPassword('10207597Rdv*');
-    setIsLogin(true);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md animate-fadeIn">
@@ -148,14 +143,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         </form>
 
         {/* Atalho Rápido para o Super Admin */}
-        <div className="mt-5 pt-4 border-t border-stone-200 dark:border-slate-800 flex items-center justify-between text-xs">
-          <button
-            type="button"
-            onClick={handleQuickSuperAdmin}
-            className="text-[11px] text-amber-700 dark:text-amber-400 hover:text-amber-800 font-medium underline"
-          >
-            ⚡ Acesso Rápido Admin
-          </button>
+        <div className="mt-5 pt-4 border-t border-stone-200 dark:border-slate-800 flex items-center justify-center text-xs">
 
           <button
             type="button"

@@ -228,7 +228,7 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
     };
   }, []);
 
-  // Tocar ou Pausar Voz Humanizada
+  // Tocar ou Pausar Voz Humanizada (com Desbloqueio Síncrono para Mobile Safari/Chrome)
   const handleToggleVoicePlay = async (messageId, text) => {
     // Se já estiver tocando essa mensagem, pausa
     if (activeVoiceMessageId === messageId && audioElementRef.current && !audioElementRef.current.paused) {
@@ -238,6 +238,15 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
       return;
     }
 
+    // DESBLOQUEIO SÍNCRONO PARA MOBILE (iOS Safari e Android):
+    // Deve ser acionado no mesmo ciclo de clique do usuário antes de qualquer await
+    if (!audioElementRef.current) {
+      audioElementRef.current = new Audio();
+    }
+    const audio = audioElementRef.current;
+    audio.pause();
+    ambientAudio.initContext();
+
     try {
       setLoadingVoiceId(messageId);
 
@@ -245,12 +254,8 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
       const voiceRes = await fetchVoiceAudio({ text, messageId });
       if (!voiceRes?.audioUrl) throw new Error('URL de áudio não disponível');
 
-      if (audioElementRef.current) {
-        audioElementRef.current.pause();
-      }
-
-      const audio = new Audio(voiceRes.audioUrl);
-      audioElementRef.current = audio;
+      audio.src = voiceRes.audioUrl;
+      audio.currentTime = 0;
 
       audio.onplay = () => {
         setActiveVoiceMessageId(messageId);
@@ -271,7 +276,10 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
         ambientAudio.restoreAfterSpeech(0.8);
       };
 
-      await audio.play();
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+      }
     } catch (err) {
       console.error('Erro ao reproduzir voz do guia:', err);
       setLoadingVoiceId(null);
@@ -346,9 +354,12 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
     }
   };
 
-  // Gravação de Áudio Terapêutico (Voz do Usuário)
   const startAudioRecording = async () => {
     try {
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        alert('O microfone no celular requer conexão segura (HTTPS ou localhost). Se estiver testando na rede local, ative HTTPS ou acesse via localhost.');
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
 
@@ -653,8 +664,8 @@ export default function ReflectionSpace({ user, onEditGuideName }) {
         <div ref={endRef} />
       </main>
 
-      {/* FOOTER DE ENTRADA (ESTILO WHATSAPP TERAPÊUTICO COM SAFE AREA DO IPHONE) */}
-      <footer className="p-3 sm:p-4 pb-safe border-t border-stone-200/80 dark:border-slate-800 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
+      {/* FOOTER DE ENTRADA COM ESPAÇAMENTO RESPONSIVO PARA O MENU INFERIOR MOBILE */}
+      <footer className="p-3 sm:p-4 pb-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] md:pb-safe border-t border-stone-200/80 dark:border-slate-800 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
         {isRecording ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}

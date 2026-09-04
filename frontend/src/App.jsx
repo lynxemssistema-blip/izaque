@@ -6,12 +6,17 @@ import ReflectionSpace from './components/ReflectionSpace';
 import AdminDashboard from './components/AdminDashboard';
 import AuthModal from './components/AuthModal';
 import WelcomeOnboarding from './components/WelcomeOnboarding';
+import UserProfileModal from './components/UserProfileModal';
+import MobileBottomNav from './components/MobileBottomNav';
+import UserSettingsModal from './components/UserSettingsModal';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('landing'); // 'landing' | 'chat' | 'admin'
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
   // Estado do Onboarding do Guia
@@ -58,6 +63,8 @@ export default function App() {
       setUser(session?.user ?? null);
       if (session?.user) {
         loadUserProfile(session.user);
+        // REQUISITO: Usuário autenticado já abre direto na página de conversa com IZAQUE
+        setActiveTab('chat');
         // Verifica se é o primeiro acesso para exibir o onboarding
         const completed = localStorage.getItem('izaque_onboarding_completed');
         if (!completed) {
@@ -148,6 +155,7 @@ export default function App() {
         onOpenAuth={() => setIsAuthOpen(true)}
         onLogout={handleLogout}
         onOpenOnboarding={() => setShowOnboarding(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
       />
 
       {/* ROTEAMENTO PRINCIPAL */}
@@ -215,6 +223,49 @@ export default function App() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         onSuccess={handleAuthSuccess}
+      />
+
+      {/* MODAL DE PERFIL DO USUÁRIO (FOTO, NOME, WHATSAPP) */}
+      {user && (
+        <UserProfileModal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          user={user}
+          profile={profile}
+          onProfileUpdated={(updated) => setProfile(updated)}
+        />
+      )}
+
+      {/* MODAL DE AJUSTES E PREFERÊNCIAS SENSORIAIS (SOM & VOZ) */}
+      <UserSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onGuideNameChanged={(newName) => {
+          setGuideName(newName);
+          window.dispatchEvent(new Event('storage'));
+        }}
+      />
+
+      {/* MENU INFERIOR FIXO PARA CELULARES E TABLETS (BOTTOM NAVIGATION BAR) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onNavigate={(tab) => {
+          if ((tab === 'chat' || tab === 'admin') && !user) {
+            setIsAuthOpen(true);
+            return;
+          }
+          setActiveTab(tab);
+        }}
+        onOpenProfile={() => {
+          if (!user) {
+            setIsAuthOpen(true);
+          } else {
+            setIsProfileOpen(true);
+          }
+        }}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        user={user}
+        profile={profile}
       />
     </div>
   );

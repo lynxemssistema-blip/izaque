@@ -3,9 +3,11 @@
  * Nenhuma chave de API de LLM fica exposta no Frontend.
  */
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL !== undefined && import.meta.env.VITE_BACKEND_URL !== '')
-  ? import.meta.env.VITE_BACKEND_URL
-  : (import.meta.env.PROD ? '' : 'http://localhost:3001');
+// Em desenvolvimento com proxy Vite ou em produção monólito/Nginx, rotas relativas garantem
+// que celular, tablet, localhost ou IP remoto acessem o backend sem bloqueios de CORS ou portas.
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim() !== '')
+  ? import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')
+  : '';
 
 /**
  * Envia uma mensagem para o Backend Hermes processar com RAG e Gemini
@@ -178,3 +180,63 @@ export async function clearChatHistory(userId) {
     throw error;
   }
 }
+
+/**
+ * Atualiza os dados de perfil do usuário (nome, telefone/WhatsApp, foto/avatar)
+ * @param {string} userId
+ * @param {{full_name?: string, phone?: string, avatar_url?: string}} profileData
+ */
+export async function updateUserProfile(userId, profileData) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/profile/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Falha ao atualizar dados de perfil');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Erro ao atualizar perfil via API:', error);
+    throw error;
+  }
+}
+
+/**
+ * Upload de foto de perfil/avatar para o Supabase Storage (bucket avatars)
+ * @param {string} userId
+ * @param {File} file
+ * @returns {Promise<string>} URL pública da foto
+ */
+export async function uploadUserAvatar(userId, file) {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}_${Date.now()}.${fileExt}`;
+    
+    // Importação dinâmica do supabase client
+    const { supabase } = await import('./supabase.js');
+    
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('❌ Erro ao fazer upload de foto de perfil:', error);
+    throw error;
+  }
+}
+

@@ -13,6 +13,8 @@ create table if not exists public.izaque_profiles (
   full_name text,
   email text,
   role text not null default 'user' check (role in ('master', 'admin', 'user')),
+  avatar_url text,
+  phone text,
   created_at timestamptz not null default timezone('utc'::text, now()),
   updated_at timestamptz not null default timezone('utc'::text, now())
 );
@@ -76,6 +78,11 @@ language plpgsql
 security definer
 as $$
 begin
+  -- Regra de Segurança e Isolamento: Se não houver p_user_id válido, retorna vazio
+  if p_user_id is null then
+    return;
+  end if;
+
   return query
   select
     um.id,
@@ -85,7 +92,7 @@ begin
     (1 - (um.embedding <=> query_embedding))::float as similarity,
     um.created_at
   from public.izaque_user_memories um
-  where (p_user_id is null or um.user_id = p_user_id)
+  where um.user_id = p_user_id
     and (1 - (um.embedding <=> query_embedding)) >= match_threshold
   order by (um.embedding <=> query_embedding) asc
   limit match_count;

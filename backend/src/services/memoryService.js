@@ -30,6 +30,12 @@ export async function generateEmbedding(text) {
 export async function searchMemories(userId, queryEmbedding, options = {}) {
   const { matchThreshold = 0.45, matchCount = 5 } = options;
 
+  // Isolamento rigoroso: se não for UUID válido de usuário autenticado, retorna vazio
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId || '');
+  if (!isUuid) {
+    return [];
+  }
+
   try {
     const { data, error } = await supabaseAdmin.rpc('izaque_match_memories', {
       query_embedding: queryEmbedding,

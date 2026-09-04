@@ -9,6 +9,7 @@ export default function Navbar({
   onOpenAuth,
   onLogout,
   onOpenOnboarding,
+  onOpenProfile,
 }) {
   const isMasterOrAdmin = profile?.role === 'master' || profile?.role === 'admin';
   const [guideName, setGuideName] = useState(() => {
@@ -23,6 +24,11 @@ export default function Navbar({
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  const getInitials = () => {
+    const name = profile?.full_name || user?.email || 'V';
+    return name.slice(0, 2).toUpperCase();
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-xl transition-colors">
@@ -103,15 +109,35 @@ export default function Navbar({
         {/* ÁREA DO USUÁRIO OU ENTRADA */}
         <div className="flex items-center space-x-3">
           {user ? (
-            <div className="flex items-center space-x-3">
-              <div className="hidden sm:flex flex-col text-right">
-                <span className="text-xs font-medium text-stone-800 dark:text-stone-200">
-                  {profile?.full_name || user.email?.split('@')[0]}
-                </span>
-                <span className="text-[10px] text-teal-800 dark:text-teal-400 flex items-center justify-end gap-1">
-                  Guia: <strong className="font-semibold">{guideName}</strong>
-                </span>
-              </div>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Botão de Perfil com Avatar */}
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                title="Visualizar e editar seu perfil"
+                className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-2xl hover:bg-stone-200/60 dark:hover:bg-slate-800 transition text-left"
+              >
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-teal-700/10 dark:bg-teal-500/20 border border-teal-700/20 dark:border-teal-500/30 overflow-hidden flex items-center justify-center text-teal-800 dark:text-teal-300 font-serif text-xs font-semibold shrink-0">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{getInitials()}</span>
+                  )}
+                </div>
+
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-xs font-medium text-stone-800 dark:text-stone-200 truncate max-w-[120px]">
+                    {profile?.full_name || user.email?.split('@')[0]}
+                  </span>
+                  <span className="text-[10px] text-teal-700 dark:text-teal-400">
+                    Meu Perfil
+                  </span>
+                </div>
+              </button>
 
               {onOpenOnboarding && (
                 <button
