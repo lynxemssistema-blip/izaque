@@ -3,11 +3,31 @@
  * Nenhuma chave de API de LLM fica exposta no Frontend.
  */
 
+import { supabase } from './supabase';
+
 // Em desenvolvimento com proxy Vite ou em produção monólito/Nginx, rotas relativas garantem
 // que celular, tablet, localhost ou IP remoto acessem o backend sem bloqueios de CORS ou portas.
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim() !== '')
   ? import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')
   : '';
+
+/**
+ * Converte resposta da API para JSON com validação segura de Content-Type.
+ * Evita que páginas HTML de servidores estáticos quebrem a aplicação com "Unexpected token <".
+ */
+async function safeParseJson(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const textSnippet = await response.text().catch(() => '');
+    if (textSnippet.includes('<!doctype') || textSnippet.includes('<html')) {
+      throw new Error(
+        `O servidor web estático respondeu com HTML (index.html). O Backend Hermes Node.js precisa estar rodando ou configurado em VITE_BACKEND_URL.`
+      );
+    }
+    throw new Error(`Resposta não-JSON recebida da API (status ${response.status})`);
+  }
+  return await response.json();
+}
 
 /**
  * Envia uma mensagem para o Backend Hermes processar com RAG e Gemini
@@ -64,12 +84,30 @@ export async function checkBackendHealth() {
  * Busca todos os agentes especialistas ativos para o seletor do chat
  */
 export async function fetchActiveAgents() {
+  // 1. Tenta via Backend Hermes
   try {
     const res = await fetch(`${BACKEND_URL}/api/agents`);
-    if (!res.ok) throw new Error('Falha ao carregar lista de especialistas');
-    return await res.json();
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) return data;
+      }
+    }
+  } catch {}
+
+  // 2. Fallback direto ao Supabase (garante que os agentes carreguem 100% mesmo com backend offline)
+  try {
+    const { data, error } = await supabase
+      .from('izaque_agents')
+      .select('id, name, slug, type, temperature, system_prompt, is_active')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
-    console.error('❌ Erro ao buscar agentes:', error);
+    console.warn('⚠️ Falha ao buscar especialistas no Supabase:', error?.message);
     return [];
   }
 }
@@ -152,16 +190,53 @@ export async function fetchVoiceAudio({ text, messageId }) {
  * @returns {Promise<Array<{id: string, role: string, content: string, isVoice: boolean, durationSeconds: number, timestamp: string}>>}
  */
 export async function fetchChatHistory(userId) {
+  if (!userId) return [];
+
+  // 1. Tenta buscar via Backend Hermes
   try {
-    if (!userId) return [];
     const response = await fetch(`${BACKEND_URL}/api/chat/history/${userId}`);
-    if (!response.ok) {
-      console.warn(`⚠️ [ChatHistory] Status ${response.status} ao buscar histórico remoto`);
+    if (response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) return data;
+      }
+    }
+  } catch {}
+
+  // 2. FALLBACK DIRETO AO BANCO SUPABASE: Garante que as mensagens do usuário
+  // carreguem 100% diretamente da nuvem, mesmo sem o backend Node ativo na VPS!
+  try {
+    const { data: messages, error } = await supabase
+      .from('izaque_messages')
+      .select('id, role, content, is_audio, audio_duration_seconds, created_at, izaque_agents(id, name, slug, type)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(100);
+
+    if (error) {
+      console.warn('⚠️ Erro ao consultar Supabase izaque_messages:', error.message);
       return [];
     }
-    return await response.json();
-  } catch (error) {
-    console.warn('⚠️ [ChatHistory] Histórico remoto temporariamente indisponível:', error?.message);
+
+    return (messages || []).map((msg) => ({
+      id: msg.id,
+      role: msg.role === 'assistant' ? 'guide' : 'user',
+      content: msg.content,
+      isVoice: Boolean(msg.is_audio),
+      durationSeconds: msg.audio_duration_seconds || 0,
+      timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date(msg.created_at).toLocaleDateString('pt-BR'),
+      created_at: msg.created_at,
+      agentUsed: msg.izaque_agents ? {
+        id: msg.izaque_agents.id,
+        name: msg.izaque_agents.name,
+        slug: msg.izaque_agents.slug,
+        type: msg.izaque_agents.type,
+      } : null,
+    }));
+  } catch (err) {
+    console.warn('⚠️ Falha ao buscar histórico persistido do Supabase:', err?.message);
     return [];
   }
 }

@@ -2,6 +2,10 @@
   RewriteEngine On
   RewriteBase /
 
+  # Não reescrever rotas de API para index.html
+  RewriteCond %{REQUEST_URI} ^/api [NC]
+  RewriteRule ^ - [L]
+
   # Permitir acesso direto a arquivos estáticos existentes (js, css, imagens, etc.)
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
