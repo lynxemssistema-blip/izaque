@@ -111,10 +111,10 @@ async function resolveAgent(agentId, userMessage, allAgents, history = []) {
         .join('\n');
 
       const routerPrompt = `
-Você é o Orquestrador Central do Santuário "IZAQUE".
+Você é o Orquestrador Central da Mentoria "IZAQUE".
 Sua função é analisar a mensagem do usuário e o contexto da conversa para decidir qual Especialista é o mais indicado para responder e acolher o desabafo.
 
-ESPECIALISTAS DO SANTUÁRIO:
+ESPECIALISTAS DA MENTORIA:
 ${allAgents.map(a => `- ID: ${a.id} | Slug: ${a.slug} | Nome: ${a.name} | Especialidade: ${a.type}
   Foco: ${a.slug === 'pastor-joao-biblico' ? 'Bíblia Sagrada (JFA), fé em Deus, oração, versículos, angústia espiritual, colocando Deus sempre em primeiro lugar.' : a.slug === 'mentor-financeiro' ? 'Mentalidade financeira, crenças de escassez, culpa com dinheiro, precificação e prosperidade.' : a.slug === 'mentora-lideranca' ? 'Liderança, delegação, cura da centralização e medo de confiar na equipe.' : 'Reprogramação de mentalidade geral, autossabotagem, desabafos emocionais e acolhimento amplo.'}`).join('\n')}
 

@@ -31,8 +31,10 @@ import {
   fetchVoiceAudio,
   fetchChatHistory,
   clearChatHistory,
+  cleanTextForSpeech,
 } from '../services/api';
 import { ambientAudio } from '../services/ambientAudioService';
+import { humanVoiceService } from '../services/voiceService';
 import UserSettingsModal from './UserSettingsModal';
 
 /**
@@ -184,10 +186,14 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     };
   }, [user?.id]);
 
-  // Estado de Reprodução de Voz
+  // Estado de Reprodução de Voz do Guia
   const [activeVoiceMessageId, setActiveVoiceMessageId] = useState(null);
   const [loadingVoiceId, setLoadingVoiceId] = useState(null);
   const audioElementRef = useRef(null);
+
+  // Estado de Reprodução do Áudio Enviado pelo Usuário
+  const [activeUserAudioId, setActiveUserAudioId] = useState(null);
+  const userAudioPlayerRef = useRef(null);
 
   // Estado de Gravação de Áudio (Voz do Usuário)
   const [isRecording, setIsRecording] = useState(false);
@@ -226,28 +232,79 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [reflections, isReflecting]);
 
-  // Limpeza de áudio ao desmontar
+  // Limpeza de áudio ao desmontar (HTML5 Audio e Web Speech API)
   useEffect(() => {
     return () => {
-      if (audioElementRef.current) {
-        audioElementRef.current.pause();
-      }
+      if (audioElementRef.current) audioElementRef.current.pause();
+      if (userAudioPlayerRef.current) userAudioPlayerRef.current.pause();
+      humanVoiceService.stop();
       ambientAudio.restoreAfterSpeech(0.5);
     };
   }, []);
 
-  // Tocar ou Pausar Voz Humanizada (com Desbloqueio Síncrono para Mobile Safari/Chrome)
+  // Reprodução de voz via motor humanizado (Web Speech API Neural com frases e respiração)
+  const playNativeSpeech = (rawText, messageId) => {
+    try {
+      if (!humanVoiceService.isSupported()) {
+        console.warn('Navegador não possui suporte à síntese de voz nativa.');
+        setLoadingVoiceId(null);
+        setActiveVoiceMessageId(null);
+        ambientAudio.restoreAfterSpeech(0.5);
+        return;
+      }
+
+      humanVoiceService.stop();
+
+      humanVoiceService.speak(rawText, {
+        onStart: () => {
+          setActiveVoiceMessageId(messageId);
+          setLoadingVoiceId(null);
+          ambientAudio.duckForSpeech(0.04, 0.8);
+        },
+        onEnd: () => {
+          setActiveVoiceMessageId(null);
+          ambientAudio.restoreAfterSpeech(1.5);
+        },
+        onError: () => {
+          setActiveVoiceMessageId(null);
+          setLoadingVoiceId(null);
+          ambientAudio.restoreAfterSpeech(0.5);
+        },
+      });
+    } catch (synthErr) {
+      console.error('Erro ao executar voz humanizada:', synthErr);
+      setLoadingVoiceId(null);
+      setActiveVoiceMessageId(null);
+      ambientAudio.restoreAfterSpeech(0.5);
+    }
+  };
+
+  // Tocar ou Pausar Voz do Mentor (Prioriza Voz Neural Humanizada com Ajustes do Usuário)
   const handleToggleVoicePlay = async (messageId, text) => {
     // Se já estiver tocando essa mensagem, pausa
-    if (activeVoiceMessageId === messageId && audioElementRef.current && !audioElementRef.current.paused) {
-      audioElementRef.current.pause();
+    if (activeVoiceMessageId === messageId) {
+      if (audioElementRef.current && !audioElementRef.current.paused) {
+        audioElementRef.current.pause();
+      }
+      humanVoiceService.stop();
       setActiveVoiceMessageId(null);
       ambientAudio.restoreAfterSpeech(1.2);
       return;
     }
 
-    // DESBLOQUEIO SÍNCRONO PARA MOBILE (iOS Safari e Android):
-    // Deve ser acionado no mesmo ciclo de clique do usuário antes de qualquer await
+    // Cancela áudios do usuário e qualquer fala ativa
+    if (audioElementRef.current) audioElementRef.current.pause();
+    if (userAudioPlayerRef.current) userAudioPlayerRef.current.pause();
+    setActiveUserAudioId(null);
+    humanVoiceService.stop();
+
+    // Preferência de voz: se ativada (padrão), utiliza as vozes neurais e o tom customizado pelo usuário
+    const preferBrowser = localStorage.getItem('izaque_voice_prefer_browser') !== 'false';
+    if (preferBrowser) {
+      playNativeSpeech(text, messageId);
+      return;
+    }
+
     if (!audioElementRef.current) {
       audioElementRef.current = new Audio();
     }
@@ -257,43 +314,108 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
 
     try {
       setLoadingVoiceId(messageId);
-
-      // Busca ou gera o áudio no backend
       const voiceRes = await fetchVoiceAudio({ text, messageId });
-      if (!voiceRes?.audioUrl) throw new Error('URL de áudio não disponível');
 
-      audio.src = voiceRes.audioUrl;
-      audio.currentTime = 0;
+      if (voiceRes?.audioUrl && !voiceRes.useSpeechSynthesis) {
+        audio.src = voiceRes.audioUrl;
+        audio.currentTime = 0;
 
-      audio.onplay = () => {
-        setActiveVoiceMessageId(messageId);
-        setLoadingVoiceId(null);
-        // AUDIO DUCKING: Abaixa a música de fundo suavemente
-        ambientAudio.duckForSpeech(0.04, 0.8);
-      };
+        audio.onplay = () => {
+          setActiveVoiceMessageId(messageId);
+          setLoadingVoiceId(null);
+          ambientAudio.duckForSpeech(0.04, 0.8);
+        };
 
-      audio.onended = () => {
-        setActiveVoiceMessageId(null);
-        // RESTORE: Sobe a música de fundo suavemente
-        ambientAudio.restoreAfterSpeech(1.5);
-      };
+        audio.onended = () => {
+          setActiveVoiceMessageId(null);
+          ambientAudio.restoreAfterSpeech(1.5);
+        };
 
-      audio.onerror = () => {
-        setActiveVoiceMessageId(null);
-        setLoadingVoiceId(null);
-        ambientAudio.restoreAfterSpeech(0.8);
-      };
+        audio.onerror = () => {
+          console.warn('⚠️ Erro ao reproduzir arquivo de áudio, ativando síntese humanizada...');
+          playNativeSpeech(voiceRes.cleanedText || text, messageId);
+        };
 
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        await playPromise;
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
+        return;
       }
+
+      playNativeSpeech(voiceRes?.cleanedText || text, messageId);
     } catch (err) {
-      console.error('Erro ao reproduzir voz do guia:', err);
-      setLoadingVoiceId(null);
-      setActiveVoiceMessageId(null);
-      ambientAudio.restoreAfterSpeech(0.5);
+      console.warn('⚠️ Tentando fallback de voz humanizada devido a:', err?.message);
+      playNativeSpeech(text, messageId);
     }
+  };
+
+  // Tocar ou Pausar Áudio Gravado e Enviado pelo Usuário
+  const handleToggleUserAudioPlay = (item) => {
+    if (activeUserAudioId === item.id) {
+      if (userAudioPlayerRef.current) userAudioPlayerRef.current.pause();
+      setActiveUserAudioId(null);
+      ambientAudio.restoreAfterSpeech(1.0);
+      return;
+    }
+
+    if (audioElementRef.current) audioElementRef.current.pause();
+    setActiveVoiceMessageId(null);
+    humanVoiceService.stop();
+
+    if (!userAudioPlayerRef.current) {
+      userAudioPlayerRef.current = new Audio();
+    }
+    const player = userAudioPlayerRef.current;
+
+    // Se possui áudio original gravado na sessão
+    if (item.audioUrl) {
+      player.src = item.audioUrl;
+      player.currentTime = 0;
+
+      player.onplay = () => {
+        setActiveUserAudioId(item.id);
+        ambientAudio.duckForSpeech(0.04, 0.6);
+      };
+
+      player.onended = () => {
+        setActiveUserAudioId(null);
+        ambientAudio.restoreAfterSpeech(1.2);
+      };
+
+      player.onerror = () => {
+        playUserAudioFallback(item);
+      };
+
+      player.play().catch(() => {
+        playUserAudioFallback(item);
+      });
+      return;
+    }
+
+    // Se for mensagem antiga do histórico sem blob salvo, reproduz a transcrição
+    playUserAudioFallback(item);
+  };
+
+  const playUserAudioFallback = (item) => {
+    setActiveUserAudioId(item.id);
+    ambientAudio.duckForSpeech(0.04, 0.6);
+    humanVoiceService.speak(item.content, {
+      customSettings: {
+        rate: 1.0,
+        pitch: 1.0,
+        gender: 'auto',
+      },
+      onStart: () => setActiveUserAudioId(item.id),
+      onEnd: () => {
+        setActiveUserAudioId(null);
+        ambientAudio.restoreAfterSpeech(1.2);
+      },
+      onError: () => {
+        setActiveUserAudioId(null);
+        ambientAudio.restoreAfterSpeech(0.5);
+      },
+    });
   };
 
   // Enviar Reflexão Escrita
@@ -353,7 +475,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         {
           id: (Date.now() + 1).toString(),
           role: 'guide',
-          content: 'Houve uma breve pausa na conexão do santuário. Mas estou aqui ouvindo você. Gostaria de reenviar?',
+          content: 'Houve uma breve pausa na conexão da mentoria. Mas estou aqui ouvindo você. Gostaria de reenviar?',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -416,8 +538,9 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = async () => {
-          const base64Data = reader.result.split(',')[1];
-          await processVoiceReflection(base64Data, recordingDuration, actualMime);
+          const dataUrl = reader.result;
+          const base64Data = typeof dataUrl === 'string' ? dataUrl.split(',')[1] : '';
+          await processVoiceReflection(base64Data, recordingDuration, actualMime, dataUrl);
         };
       };
 
@@ -450,7 +573,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     }
   };
 
-  const processVoiceReflection = async (audioBase64, durationSeconds, mimeType = 'audio/webm') => {
+  const processVoiceReflection = async (audioBase64, durationSeconds, mimeType = 'audio/webm', dataUrl = null) => {
     setIsReflecting(true);
 
     try {
@@ -476,6 +599,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         role: 'user',
         content: res.transcription || 'Reflexão em áudio gravada.',
         isVoice: true,
+        audioUrl: dataUrl,
         durationSeconds,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
@@ -538,7 +662,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
             </h2>
             <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400" />
-              Santuário ativo • Escuta compassiva
+              Mentoria ativa • Escuta atenta
             </p>
           </div>
         </div>
@@ -631,26 +755,40 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
                   </div>
                 )}
 
-                {/* Se foi áudio enviado pelo usuário (Estilo WhatsApp) */}
+                {/* Áudio enviado pelo usuário com Player Interativo */}
                 {item.isVoice && (
-                  <div className="mb-2.5 p-2.5 rounded-2xl bg-teal-800/50 border border-teal-600/50 flex items-center gap-3 text-xs">
-                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
-                      <Mic className="w-4 h-4" />
-                    </div>
+                  <div className="mb-2.5 p-2.5 sm:p-3 rounded-2xl bg-teal-800/60 border border-teal-600/50 flex items-center gap-3 text-xs shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleUserAudioPlay(item)}
+                      title={activeUserAudioId === item.id ? 'Pausar áudio enviado' : 'Ouvir o áudio que você enviou'}
+                      className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center shrink-0 transition transform active:scale-95 shadow-sm cursor-pointer"
+                    >
+                      {activeUserAudioId === item.id ? (
+                        <Pause className="w-4 h-4 fill-current" />
+                      ) : (
+                        <Play className="w-4 h-4 fill-current ml-0.5" />
+                      )}
+                    </button>
                     <div className="flex-1">
-                      <div className="flex items-center gap-1">
-                        <span className="h-1.5 w-1 rounded-full bg-white animate-pulse" />
-                        <span className="h-3 w-1 rounded-full bg-white/70" />
-                        <span className="h-2 w-1 rounded-full bg-white/90" />
-                        <span className="h-4 w-1 rounded-full bg-white" />
-                        <span className="h-2.5 w-1 rounded-full bg-white/80" />
-                        <span className="h-1.5 w-1 rounded-full bg-white/60" />
-                        <span className="h-3.5 w-1 rounded-full bg-white" />
-                        <span className="h-2 w-1 rounded-full bg-white/70" />
+                      <div className="flex items-center gap-1 h-4">
+                        {[40, 75, 55, 90, 65, 45, 85, 60, 95, 50, 70, 40].map((h, i) => (
+                          <span
+                            key={i}
+                            className={`w-1 rounded-full bg-white transition-all duration-300 ${
+                              activeUserAudioId === item.id ? 'animate-pulse' : 'opacity-75'
+                            }`}
+                            style={{
+                              height: `${h}%`,
+                              animationDelay: `${i * 80}ms`,
+                            }}
+                          />
+                        ))}
                       </div>
-                      <span className="text-[10px] text-teal-100 font-mono mt-1 block">
-                        Áudio de desabafo ({item.durationSeconds || 0}s)
-                      </span>
+                      <div className="flex items-center justify-between text-[10px] text-teal-100 font-mono mt-1">
+                        <span>{activeUserAudioId === item.id ? 'Reproduzindo seu áudio...' : 'Áudio gravado por você'}</span>
+                        <span>{item.durationSeconds ? `${item.durationSeconds}s` : ''}</span>
+                      </div>
                     </div>
                   </div>
                 )}

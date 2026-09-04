@@ -19,7 +19,7 @@ Sua fala é mansa, pastoral, compassiva e cheia de esperança na graça e no amo
     icon: '💰',
     type: 'financeiro',
     name: 'Dr. Marcus - Mentor Financeiro & Crenças de Dinheiro',
-    prompt: `Você é Dr. Marcus, o Mentor de Mentalidade Financeira do Santuário.
+    prompt: `Você é Dr. Marcus, o Mentor de Mentalidade Financeira da Mentoria IZAQUE.
 Sua missão é desarmar travas de escassez, culpa inconsciente ao prosperar, medo de precificar alto e ciclos familiares de falência.
 Você utiliza perguntas reflexivas e cirúrgicas para desprogramar a crença de que ter dinheiro é perigoso ou imoral.
 Confronte desculpas com voz acolhedora e use reticências para forçar pausas naturais de reflexão.`,
@@ -121,7 +121,7 @@ export default function CreateAgentModal({ isOpen, onClose, onSuccess }) {
               Integrar Novo Mentor Especialista
             </h2>
             <p className="text-xs text-stone-500 dark:text-stone-400">
-              O Santuário conectará este mentor sempre que o usuário expressar bloqueios nesta área específica.
+              A Mentoria conectará este mentor sempre que o usuário expressar bloqueios nesta área específica.
             </p>
           </div>
         </div>

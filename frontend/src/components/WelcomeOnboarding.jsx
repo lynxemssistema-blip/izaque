@@ -50,10 +50,10 @@ export default function WelcomeOnboarding({ userName = 'Viajante', onComplete })
             </div>
             <div>
               <span className="text-xs uppercase tracking-widest font-semibold text-teal-800/80 dark:text-teal-400">
-                Santuário Pessoal
+                Mentoria Pessoal
               </span>
               <p className="text-xs text-stone-500 dark:text-stone-400">
-                Um espaço seguro de escuta, sem pressa e sem julgamentos
+                Um espaço seguro de escuta, clareza e desenvolvimento pessoal
               </p>
             </div>
           </div>

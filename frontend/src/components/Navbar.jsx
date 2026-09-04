@@ -43,13 +43,13 @@ export default function Navbar({
           </div>
           <div>
             <span className="text-lg font-serif font-medium tracking-tight text-stone-900 dark:text-stone-50 flex items-center gap-2">
-              Santuário
+              Mentoria
               <span className="text-[10px] font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/40">
-                Clareza & Cura
+                Clareza & Direção
               </span>
             </span>
             <p className="text-[10px] text-stone-500 dark:text-stone-400 -mt-0.5">
-              Escuta atenta e desatamento de nós emocionais
+              Escuta atenta e desenvolvimento pessoal
             </p>
           </div>
         </div>
@@ -164,7 +164,7 @@ export default function Navbar({
               className="px-5 py-2.5 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-medium tracking-wide shadow-md shadow-teal-700/20 transition flex items-center gap-1.5"
             >
               <Heart className="w-3.5 h-3.5" />
-              <span>Entrar no Santuário</span>
+              <span>Acessar Mentoria</span>
             </button>
           )}
         </div>

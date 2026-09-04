@@ -188,16 +188,16 @@ export default function App() {
               <div className="flex-1 flex items-center justify-center p-6 text-center">
                 <div className="max-w-md p-8 rounded-4xl bg-white dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 shadow-xl space-y-4">
                   <h3 className="text-xl font-serif font-medium text-stone-900 dark:text-stone-100">
-                    Seu Santuário Pessoal
+                    Sua Mentoria Pessoal
                   </h3>
                   <p className="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
-                    Para que seus momentos de reflexão e desabafo fiquem guardados com total sigilo e continuidade, entre na sua conta.
+                    Para que seus momentos de reflexão e desenvolvimento fiquem guardados com total sigilo e continuidade, entre na sua conta.
                   </p>
                   <button
                     onClick={() => setIsAuthOpen(true)}
                     className="w-full py-3.5 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white font-medium text-xs tracking-wide shadow-md shadow-teal-700/20 transition"
                   >
-                    Entrar no Santuário
+                    Acessar Mentoria
                   </button>
                 </div>
               </div>
@@ -222,7 +222,7 @@ export default function App() {
                     onClick={() => setActiveTab('landing')}
                     className="px-6 py-2.5 rounded-xl bg-stone-200 dark:bg-slate-700 hover:bg-stone-300 font-medium text-xs transition"
                   >
-                    Voltar ao Santuário
+                    Voltar para a Mentoria
                   </button>
                 </div>
               </div>

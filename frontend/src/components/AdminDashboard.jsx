@@ -133,7 +133,7 @@ export default function AdminDashboard({ currentUser }) {
                 <Shield className="w-5 h-5 stroke-[1.75]" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50 tracking-tight">
-                Painel de Gestão do Santuário
+                Painel de Gestão da Mentoria
               </h1>
               <span className="px-3 py-0.5 rounded-full text-xs font-serif bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/40">
                 SUPER ADMIN
@@ -305,7 +305,7 @@ export default function AdminDashboard({ currentUser }) {
                 <thead className="bg-stone-100/70 dark:bg-slate-850 uppercase font-semibold text-[11px] text-stone-500 border-b border-stone-200/80 dark:border-slate-700">
                   <tr>
                     <th className="p-4">Nome & E-mail</th>
-                    <th className="p-4">Papel no Santuário</th>
+                    <th className="p-4">Papel na Mentoria</th>
                     <th className="p-4">Data de Entrada</th>
                     <th className="p-4 text-right">Alterar Papel</th>
                   </tr>

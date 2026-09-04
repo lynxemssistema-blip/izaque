@@ -62,7 +62,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             <Feather className="w-6 h-6 stroke-[1.75]" />
           </div>
           <h2 className="text-2xl font-serif font-medium tracking-tight text-stone-900 dark:text-stone-50">
-            {isLogin ? 'Entrar no Santuário' : 'Criar Seu Refúgio Pessoal'}
+            {isLogin ? 'Acessar Mentoria' : 'Iniciar Sua Jornada'}
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-serif">
             {isLogin
@@ -137,7 +137,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             disabled={loading}
             className="w-full mt-2 py-3.5 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-md shadow-teal-700/20 transition duration-150 flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <span>{loading ? 'Entrando com cuidado...' : isLogin ? 'Entrar no Santuário' : 'Iniciar Minha Jornada'}</span>
+            <span>{loading ? 'Entrando com cuidado...' : isLogin ? 'Acessar Mentoria' : 'Iniciar Minha Jornada'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>

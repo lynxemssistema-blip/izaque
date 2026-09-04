@@ -31,13 +31,15 @@ app.use(express.urlencoded({ limit: '25mb', extended: true }));
 app.use(morgan('dev'));
 
 // Health check para monitoramento na VPS
-app.get('/health', (req, res) => {
+const healthHandler = (req, res) => {
   res.status(200).json({
     status: 'online',
     service: 'IZAQUE API - Backend Orchestrator',
     timestamp: new Date().toISOString(),
   });
-});
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // Rotas da API
 app.use('/api', chatRoutes);

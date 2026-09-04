@@ -58,7 +58,7 @@ export default function AdminHelpGuide() {
               Manual de Instruções do Administrador
             </h2>
             <p className="text-xs sm:text-sm text-stone-300 font-serif max-w-2xl leading-relaxed">
-              Guia oficial de operação do Santuário IZAQUE. Aqui você encontra todos os detalhes sobre gestão de usuários, memórias psicológicas, mentores especialistas, base de estudos e infraestrutura.
+              Guia oficial de operação da Mentoria IZAQUE. Aqui você encontra todos os detalhes sobre gestão de usuários, memórias psicológicas, mentores especialistas, base de estudos e infraestrutura.
             </p>
           </div>
           <div className="w-16 h-16 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
@@ -111,7 +111,7 @@ export default function AdminHelpGuide() {
                 1. Gestão de Usuários e Níveis de Acesso
               </h3>
               <p className="text-xs text-stone-500 dark:text-stone-400">
-                Entenda os 3 níveis de permissão no Santuário e como promover administradores
+                Entenda os 3 níveis de permissão na Mentoria e como promover administradores
               </p>
             </div>
           </div>
@@ -121,16 +121,16 @@ export default function AdminHelpGuide() {
         {openSections.users && (
           <div className="p-5 sm:p-6 pt-0 space-y-4 border-t border-stone-100 dark:border-slate-700/60 text-xs sm:text-sm text-stone-700 dark:text-stone-300 font-serif leading-relaxed">
             <p>
-              O Santuário IZAQUE possui três papéis de usuário rigorosamente definidos pela segurança de linhas do banco de dados (Row Level Security - RLS do Supabase):
+              A Mentoria IZAQUE possui três papéis de usuário rigorosamente definidos pela segurança de linhas do banco de dados (Row Level Security - RLS do Supabase):
             </p>
 
             <div className="grid sm:grid-cols-3 gap-3 my-3">
-              <div className="p-4 rounded-2xl bg-stone-50 dark:bg-slate-850 border border-stone-200 dark:border-slate-700">
+              <div className="p-4 rounded-2xl bg-stone-50 dark:bg-slate-855 border border-stone-200 dark:border-slate-700">
                 <span className="font-semibold text-teal-800 dark:text-teal-400 text-xs uppercase tracking-wider block">
                   Papel: user
                 </span>
                 <p className="text-xs mt-1 text-stone-600 dark:text-stone-300">
-                  <strong>Usuário Comum:</strong> Acessa o Santuário (`/`), conversa com Izaque por texto ou voz, ouve reflexões e visualiza apenas o seu próprio histórico persistido. <em>Não tem acesso ao painel admin.</em>
+                  <strong>Usuário Comum:</strong> Acessa a Mentoria (`/`), conversa com Izaque por texto ou voz, ouve reflexões e visualiza apenas o seu próprio histórico persistido. <em>Não tem acesso ao painel admin.</em>
                 </p>
               </div>
 
@@ -139,7 +139,7 @@ export default function AdminHelpGuide() {
                   Papel: admin
                 </span>
                 <p className="text-xs mt-1 text-stone-600 dark:text-stone-300">
-                  <strong>Gerente do Santuário:</strong> Acessa o `/admin`. Pode ver a lista de usuários, acompanhar memórias de sessões, criar novos mentores e anexar materiais de estudo técnicos.
+                  <strong>Gerente da Mentoria:</strong> Acessa o `/admin`. Pode ver a lista de usuários, acompanhar memórias de sessões, criar novos mentores e anexar materiais de estudo técnicos.
                 </p>
               </div>
 
@@ -185,7 +185,7 @@ export default function AdminHelpGuide() {
         {openSections.memories && (
           <div className="p-5 sm:p-6 pt-0 space-y-4 border-t border-stone-100 dark:border-slate-700/60 text-xs sm:text-sm text-stone-700 dark:text-stone-300 font-serif leading-relaxed">
             <p>
-              O Santuário IZAQUE não é um chatbot comum que esquece a conversa ao fechar a janela. Ele possui uma <strong>Arquitetura Cognitiva em Background</strong>:
+              A Mentoria IZAQUE não é um chatbot comum que esquece a conversa ao fechar a janela. Ele possui uma <strong>Arquitetura Cognitiva em Background</strong>:
             </p>
 
             <ol className="list-decimal pl-5 space-y-2">

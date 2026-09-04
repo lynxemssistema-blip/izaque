@@ -257,7 +257,7 @@ export default function UserProfileModal({ isOpen, onClose, user, profile, onPro
           {/* NIVEL / ROLE */}
           <div className="p-3.5 rounded-2xl bg-stone-100/70 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 flex items-center justify-between text-xs">
             <span className="font-serif text-stone-600 dark:text-stone-300">
-              Nível de Acesso no Santuário:
+              Nível de Acesso na Mentoria:
             </span>
             <span className="px-2.5 py-0.5 rounded-full font-serif font-medium bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800/40 flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -265,7 +265,7 @@ export default function UserProfileModal({ isOpen, onClose, user, profile, onPro
                 ? 'Super Administrador (Master)'
                 : profile?.role === 'admin'
                 ? 'Administrador'
-                : 'Membro do Santuário'}
+                : 'Membro da Mentoria'}
             </span>
           </div>
 

@@ -7,9 +7,69 @@ import { supabase } from './supabase';
 
 // Em desenvolvimento com proxy Vite ou em produção monólito/Nginx, rotas relativas garantem
 // que celular, tablet, localhost ou IP remoto acessem o backend sem bloqueios de CORS ou portas.
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim() !== '')
-  ? import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')
-  : '';
+function resolveBackendUrl() {
+  if (import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim() !== '') {
+    return import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
+  }
+
+  // Se estiver rodando localmente em uma porta estática sem proxy Vite (ex: Live Server 5500 ou preview direto)
+  if (typeof window !== 'undefined' && window.location) {
+    const { hostname, port } = window.location;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (isLocal && port && port !== '5173' && port !== '4173' && port !== '3001') {
+      return 'http://localhost:3001';
+    }
+  }
+
+  return '';
+}
+
+const BACKEND_URL = resolveBackendUrl();
+
+/**
+ * Remove formatações Markdown, emojis, URLs e caracteres que quebram o fluxo da fala.
+ * Otimizado para entonação calma e meditativa do santuário.
+ */
+export function cleanTextForSpeech(text) {
+  if (!text) return '';
+
+  return text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`.*?`/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[*_#~>]/g, '')
+    .replace(/^\s*[-•*]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu, '')
+    .replace(/\r\n/g, ' ')
+    .replace(/\n+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\.{3,}/g, '... ')
+    .trim();
+}
+
+/**
+ * Calcula o hash SHA-256 do texto para verificação de cache no Supabase Storage
+ */
+export async function getCleanTextAndHash(text) {
+  const clean = cleanTextForSpeech(text);
+  if (!clean) return { cleanText: '', fileName: '' };
+  try {
+    if (typeof window !== 'undefined' && window.crypto?.subtle) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(clean);
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+      const fileName = `voice_${hashHex.slice(0, 24)}.mp3`;
+      return { cleanText: clean, fileName };
+    }
+    return { cleanText: clean, fileName: '' };
+  } catch {
+    return { cleanText: clean, fileName: '' };
+  }
+}
 
 /**
  * Converte resposta da API para JSON com validação segura de Content-Type.
@@ -156,13 +216,21 @@ export async function sendAudioChatMessage({ audioBase64, mimeType = 'audio/webm
 }
 
 /**
- * Solicita ao Backend Hermes a sintetização ou resgate do cache de áudio da reflexão
+ * Solicita ao Backend Hermes a sintetização ou resgate do cache de áudio da reflexão.
+ * Se o backend estiver offline ou retornar 404 (ex: em hospedagem estática/VPS sem proxy),
+ * busca diretamente no cache do Supabase Storage ou ativa a Web Speech API nativa.
  * @param {object} params
  * @param {string} params.text Texto da reflexão
  * @param {string} [params.messageId] Identificador da mensagem
- * @returns {Promise<{audioUrl: string, fromCache: boolean, cleanedText: string}>}
+ * @returns {Promise<{audioUrl: string|null, fromCache: boolean, cleanedText: string, useSpeechSynthesis: boolean}>}
  */
 export async function fetchVoiceAudio({ text, messageId }) {
+  const { cleanText, fileName } = await getCleanTextAndHash(text);
+  if (!cleanText) {
+    throw new Error('Texto não possui caracteres válidos para leitura.');
+  }
+
+  // 1. Tenta sintetizar via Backend Hermes (ElevenLabs -> OpenAI -> Google TTS)
   try {
     const response = await fetch(`${BACKEND_URL}/api/voice`, {
       method: 'POST',
@@ -172,16 +240,56 @@ export async function fetchVoiceAudio({ text, messageId }) {
       body: JSON.stringify({ text, messageId }),
     });
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || 'Falha ao sintetizar voz da reflexão');
+    if (response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        if (data?.audioUrl) {
+          return {
+            audioUrl: data.audioUrl,
+            fromCache: Boolean(data.fromCache),
+            cleanedText: cleanText,
+            useSpeechSynthesis: false,
+          };
+        }
+      }
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Erro na sintetização de voz:', error);
-    throw error;
+  } catch (backendErr) {
+    console.warn('⚠️ [Voice] Backend /api/voice indisponível, buscando alternativas:', backendErr?.message);
   }
+
+  // 2. FALLBACK 1: Verifica diretamente no Supabase Storage se o áudio já foi gerado e salvo em cache
+  if (fileName) {
+    try {
+      const { data: publicUrlData } = supabase.storage
+        .from('audio_cache')
+        .getPublicUrl(fileName);
+
+      if (publicUrlData?.publicUrl) {
+        const headCheck = await fetch(publicUrlData.publicUrl, { method: 'HEAD' }).catch(() => null);
+        if (headCheck && headCheck.ok) {
+          console.log('⚡ [Voice Cache Hit] Áudio encontrado diretamente no Supabase Storage:', fileName);
+          return {
+            audioUrl: publicUrlData.publicUrl,
+            fromCache: true,
+            cleanedText: cleanText,
+            useSpeechSynthesis: false,
+          };
+        }
+      }
+    } catch (storageErr) {
+      console.warn('⚠️ [Voice] Verificação direta de cache no Supabase Storage indisponível:', storageErr?.message);
+    }
+  }
+
+  // 3. FALLBACK 2: Se não houver áudio pré-gerado e o backend não responder (404/offline),
+  // aciona a síntese de voz nativa do navegador (Web Speech API pt-BR) para voz sem interrupção
+  return {
+    audioUrl: null,
+    fromCache: false,
+    cleanedText: cleanText,
+    useSpeechSynthesis: true,
+  };
 }
 
 /**

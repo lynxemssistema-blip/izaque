@@ -2,7 +2,13 @@
   RewriteEngine On
   RewriteBase /
 
-  # Não reescrever rotas de API para index.html
+  # Se o Apache possuir mod_proxy habilitado, encaminha chamadas /api diretamente para o Backend Node.js na porta 3001
+  <IfModule mod_proxy.c>
+    RewriteCond %{REQUEST_URI} ^/api(/.*)?$ [NC]
+    RewriteRule ^api/(.*)$ http://127.0.0.1:3001/api/$1 [P,L]
+  </IfModule>
+
+  # Não reescrever rotas de API para index.html caso mod_proxy não esteja ativo
   RewriteCond %{REQUEST_URI} ^/api [NC]
   RewriteRule ^ - [L]
 

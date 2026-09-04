@@ -31,10 +31,10 @@ export default function LandingPage({ onStartChat, user }) {
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-stone-200/70 dark:bg-slate-800/80 border border-stone-300/60 dark:border-slate-700/80 text-xs text-stone-600 dark:text-stone-300 mb-8 backdrop-blur-md shadow-sm">
           <span className="flex h-2 w-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-pulse" />
           <span className="font-serif font-medium text-teal-800 dark:text-teal-300">
-            Santuário de Clareza & Escuta
+            Mentoria de Clareza & Desenvolvimento
           </span>
           <span>•</span>
-          <span>Um refúgio para desacelerar e se reencontrar</span>
+          <span>Um espaço seguro para desacelerar e se reencontrar</span>
         </div>
 
         {/* Título Principal Humanizado */}
@@ -48,7 +48,7 @@ export default function LandingPage({ onStartChat, user }) {
 
         {/* Descrição Apresentando Izaque */}
         <p className="mt-6 text-base sm:text-xl text-stone-600 dark:text-stone-300 max-w-2xl mx-auto leading-relaxed font-serif">
-          Conheça <strong>Izaque</strong>: um guia de presença calma e escuta profunda, dedicado a ajudar você a compreender bloqueios emocionais, quebrar ciclos de autossabotagem e reconstruir a confiança no seu caminho.
+          Conheça <strong>Izaque</strong>: um mentor de presença calma e escuta profunda, dedicado a ajudar você a compreender bloqueios emocionais, quebrar ciclos de autossabotagem e reconstruir a confiança no seu caminho.
         </p>
 
         {/* Chamadas para Ação */}
@@ -58,7 +58,7 @@ export default function LandingPage({ onStartChat, user }) {
             className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-xl shadow-teal-700/25 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-3"
           >
             <Feather className="w-4 h-4 stroke-[2]" />
-            <span>{user ? 'Entrar no Meu Santuário com Izaque' : 'Conversar com Izaque'}</span>
+            <span>{user ? 'Acessar Minha Mentoria com Izaque' : 'Conversar com Izaque'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 
@@ -97,7 +97,7 @@ export default function LandingPage({ onStartChat, user }) {
         <div className="max-w-5xl mx-auto space-y-16">
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <span className="text-xs font-semibold uppercase tracking-widest text-teal-800 dark:text-teal-400">
-              A Proposta do Santuário
+              A Proposta da Mentoria
             </span>
             <h2 className="text-3xl sm:text-4xl font-serif font-normal text-stone-900 dark:text-stone-50">
               Um espaço para despir as armaduras do cotidiano.
@@ -197,10 +197,10 @@ export default function LandingPage({ onStartChat, user }) {
               </div>
               <div>
                 <h4 className="text-base font-serif font-medium text-stone-900 dark:text-stone-100">
-                  Um santuário personalizado com o nome que você escolher
+                  Uma mentoria personalizada com o nome que você escolher
                 </h4>
                 <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-serif mt-1 leading-relaxed">
-                  O nome de origem é Izaque, mas no seu primeiro acesso você pode chamá-lo de Guia, Mentor ou o nome que trouxer mais paz ao seu coração.
+                  O nome de origem é Izaque, mas no seu primeiro acesso você pode chamá-lo de Guia, Mentor ou o nome que trouxer mais clareza ao seu coração.
                 </p>
               </div>
             </div>
@@ -208,7 +208,7 @@ export default function LandingPage({ onStartChat, user }) {
         </div>
       </section>
 
-      {/* 4. CONVITE FINAL DE ENTRADA NO SANTUÁRIO */}
+      {/* 4. CONVITE FINAL DE ENTRADA NA MENTORIA */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">
         <div className="p-10 sm:p-14 rounded-4xl bg-stone-100/90 dark:bg-slate-800/70 border border-stone-200 dark:border-slate-700 shadow-xl space-y-6">
           <div className="w-14 h-14 rounded-3xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 mx-auto">
@@ -220,7 +220,7 @@ export default function LandingPage({ onStartChat, user }) {
           </h2>
 
           <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 font-serif max-w-md mx-auto leading-relaxed">
-            Respire fundo. Não há nada a provar aqui dentro. Seu guia está pronto para ouvir o que você precisa dizer.
+            Respire fundo. Não há nada a provar aqui dentro. Seu mentor está pronto para ouvir o que você precisa dizer.
           </p>
 
           <div className="pt-2">
@@ -228,7 +228,7 @@ export default function LandingPage({ onStartChat, user }) {
               onClick={onStartChat}
               className="px-9 py-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-xl shadow-teal-700/25 transition duration-300 inline-flex items-center gap-2"
             >
-              <span>{user ? 'Entrar no Santuário' : 'Começar Minha Sessão Agora'}</span>
+              <span>{user ? 'Acessar Mentoria' : 'Começar Minha Sessão Agora'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -237,7 +237,7 @@ export default function LandingPage({ onStartChat, user }) {
 
       {/* RODAPÉ DISCRETO */}
       <footer className="py-8 border-t border-stone-200/80 dark:border-slate-800 text-center text-xs text-stone-400 dark:text-stone-500 font-serif">
-        <p>Santuário IZAQUE • Espaço de Desaceleração, Escuta Atenta e Cura Emocional</p>
+        <p>Mentoria IZAQUE • Espaço de Clareza, Escuta Atenta e Desenvolvimento Pessoal</p>
       </footer>
     </div>
   );
