@@ -15,6 +15,7 @@ import {
   Compass,
   Heart,
   BookOpen,
+  HelpCircle,
 } from 'lucide-react';
 import {
   fetchAdminMetrics,
@@ -27,6 +28,7 @@ import {
 } from '../services/adminApi';
 import CreateAgentModal from './CreateAgentModal';
 import AgentKnowledgeManager from './AgentKnowledgeManager';
+import AdminHelpGuide from './AdminHelpGuide';
 
 export default function AdminDashboard({ currentUser }) {
   const [activeTab, setActiveTab] = useState('metrics');
@@ -142,7 +144,19 @@ export default function AdminDashboard({ currentUser }) {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setActiveTab('help')}
+              className={`px-3.5 py-2 rounded-2xl border text-xs font-medium transition flex items-center gap-2 shadow-sm ${
+                activeTab === 'help'
+                  ? 'bg-teal-700 text-white border-teal-700'
+                  : 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-amber-200/80 dark:border-amber-800/60 text-amber-800 dark:text-amber-300'
+              }`}
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Manual do Admin</span>
+            </button>
+
             <button
               onClick={loadAllData}
               disabled={refreshing}
@@ -254,6 +268,18 @@ export default function AdminDashboard({ currentUser }) {
             >
               <Sliders className="w-3.5 h-3.5" />
               Mentores & Estudos
+            </button>
+
+            <button
+              onClick={() => setActiveTab('help')}
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+                activeTab === 'help'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+              }`}
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Manual de Ajuda</span>
             </button>
           </div>
         </div>
@@ -502,6 +528,11 @@ export default function AdminDashboard({ currentUser }) {
               )}
             </div>
           </div>
+        )}
+
+        {/* ABA 4: GUIA E MANUAL DO ADMINISTRADOR */}
+        {activeTab === 'help' && (
+          <AdminHelpGuide />
         )}
 
         {/* MODAL PARA CRIAR AGENTE */}
