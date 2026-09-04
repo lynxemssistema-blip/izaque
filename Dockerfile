@@ -5,7 +5,7 @@
 # ========================================================
 
 # ESTÁGIO 1: Build do Frontend React
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /build/frontend
 
@@ -25,7 +25,7 @@ RUN npm run build
 # =====================================================
 # ESTÁGIO 2: Backend Node.js de Produção (Imagem Final)
 # =====================================================
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
