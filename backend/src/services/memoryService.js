@@ -1,0 +1,112 @@
+import { genAI, EMBEDDING_MODEL } from '../config/gemini.js';
+import { supabaseAdmin } from '../config/supabase.js';
+
+/**
+ * Gera o embedding vetorial de um texto usando o Google Gemini (dimensão 768).
+ * @param {string} text Texto de entrada
+ * @returns {Promise<number[]>} Vetor numérico de 768 dimensões
+ */
+export async function generateEmbedding(text) {
+  try {
+    const embeddingModel = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
+    const result = await embeddingModel.embedContent({
+      content: { parts: [{ text }] },
+      outputDimensionality: 768,
+    });
+    return result.embedding.values;
+  } catch (error) {
+    console.error('❌ Erro ao gerar embedding no Gemini:', error.message);
+    throw new Error(`Falha na geração de embedding: ${error.message}`);
+  }
+}
+
+/**
+ * Busca memórias relevantes de longo prazo do usuário via RPC 'izaque_match_memories' (pgvector).
+ * @param {string} userId ID do usuário no Supabase
+ * @param {number[]} queryEmbedding Vetor de 768 posições
+ * @param {object} options Parâmetros de threshold e limite
+ * @returns {Promise<Array>} Lista de memórias encontradas com similaridade
+ */
+export async function searchMemories(userId, queryEmbedding, options = {}) {
+  const { matchThreshold = 0.45, matchCount = 5 } = options;
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc('izaque_match_memories', {
+      query_embedding: queryEmbedding,
+      match_threshold: matchThreshold,
+      match_count: matchCount,
+      p_user_id: userId,
+    });
+
+    if (error) {
+      console.error('❌ Erro ao executar RPC izaque_match_memories no Supabase:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('❌ Exceção ao buscar memórias vetoriais:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Formata as memórias recuperadas para injeção fluida e psicológica no Prompt.
+ * @param {Array} memories Lista de memórias retornadas do banco
+ * @returns {string} Texto formatado para o prompt
+ */
+export function formatMemoriesForPrompt(memories) {
+  if (!memories || memories.length === 0) {
+    return 'Nenhum histórico prévio ou bloqueio registrado para este contexto específico.';
+  }
+
+  const formattedLines = memories.map((m, index) => {
+    const dataFormatada = new Date(m.created_at).toLocaleDateString('pt-BR');
+    const categoria = (m.category || 'bloqueio').toUpperCase();
+    const confianca = Math.round((m.similarity || 0) * 100);
+    return `${index + 1}. [${categoria} | Registrado em ${dataFormatada} | Relevância: ${confianca}%]: "${m.content}"`;
+  });
+
+  return `=== MEMÓRIAS DE LONGO PRAZO RECUPERADAS (HISTÓRICO PSICOLÓGICO DO USUÁRIO) ===
+Abaixo estão fatos reais, travas mentais, padrões e crenças que o usuário já revelou em conversas anteriores:
+${formattedLines.join('\n')}
+
+DIRETRIZ DE USO DAS MEMÓRIAS:
+- Integre esse conhecimento com discrição cirúrgica e empatia.
+- Confronte desculpas ou contradições caso o usuário esteja repetindo um ciclo que já foi identificado no passado.
+- Não soe artificial como um robô listando dados; atue como um mentor que realmente conhece e lembra da jornada dele.
+================================================================================`;
+}
+
+/**
+ * Salva uma nova memória de longo prazo no Supabase na tabela izaque_user_memories.
+ * @param {object} param0 { userId, content, category, importanceScore }
+ */
+export async function saveMemory({ userId, content, category = 'blocker', importanceScore = 3 }) {
+  try {
+    const embedding = await generateEmbedding(content);
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_user_memories')
+      .insert({
+        user_id: userId,
+        content: content.trim(),
+        category,
+        importance_score: importanceScore,
+        embedding,
+      })
+      .select('id, content, category, created_at')
+      .single();
+
+    if (error) {
+      console.error('❌ Erro ao salvar memória na tabela izaque_user_memories:', error);
+      return null;
+    }
+
+    console.log(`🧠 [Hermes Memory] Nova memória salva para o usuário ${userId}: [${category}] "${content}"`);
+    return data;
+  } catch (err) {
+    console.error('❌ Exceção ao salvar memória:', err.message);
+    return null;
+  }
+}
