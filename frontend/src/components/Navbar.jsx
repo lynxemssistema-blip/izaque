@@ -32,23 +32,23 @@ export default function Navbar({
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-xl transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
         {/* LOGO DO SANTUÁRIO */}
         <div
           onClick={() => setActiveTab('landing')}
-          className="flex items-center space-x-3 cursor-pointer group"
+          className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer group min-w-0"
         >
-          <div className="w-10 h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shadow-sm group-hover:scale-105 transition-transform">
-            <Feather className="w-5 h-5 stroke-[1.75]" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shadow-sm group-hover:scale-105 transition-transform shrink-0">
+            <Feather className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
           </div>
-          <div>
-            <span className="text-lg font-serif font-medium tracking-tight text-stone-900 dark:text-stone-50 flex items-center gap-2">
+          <div className="min-w-0">
+            <span className="text-base sm:text-lg font-serif font-medium tracking-tight text-stone-900 dark:text-stone-50 flex items-center gap-1.5 truncate">
               Mentoria
-              <span className="text-[10px] font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/40">
+              <span className="hidden sm:inline-block text-[10px] font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/40">
                 Clareza & Direção
               </span>
             </span>
-            <p className="text-[10px] text-stone-500 dark:text-stone-400 -mt-0.5">
+            <p className="hidden sm:block text-[10px] text-stone-500 dark:text-stone-400 -mt-0.5 truncate">
               Escuta atenta e desenvolvimento pessoal
             </p>
           </div>
@@ -161,7 +161,7 @@ export default function Navbar({
           ) : (
             <button
               onClick={onOpenAuth}
-              className="px-5 py-2.5 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-medium tracking-wide shadow-md shadow-teal-700/20 transition flex items-center gap-1.5"
+              className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-medium tracking-wide shadow-md shadow-teal-700/20 transition flex items-center gap-1.5 shrink-0"
             >
               <Heart className="w-3.5 h-3.5" />
               <span>Acessar Mentoria</span>

@@ -1,4 +1,4 @@
-import { genAI, CHAT_MODEL } from '../config/gemini.js';
+import { genAI, CHAT_MODEL, FALLBACK_CHAT_MODELS } from '../config/gemini.js';
 import { saveMemory } from './memoryService.js';
 
 /**
@@ -47,16 +47,30 @@ Retorne EXCLUSIVAMENTE um objeto JSON válido no seguinte formato:
 Se nada relevante foi revelado, retorne apenas: {"shouldStore": false}
 `;
 
-      const model = genAI.getGenerativeModel({
-        model: CHAT_MODEL,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.1, // Baixa temperatura para extração determinística
-        },
-      });
+      const modelsToTry = [CHAT_MODEL, ...(FALLBACK_CHAT_MODELS || [])].filter((m, i, arr) => arr.indexOf(m) === i);
+      let responseText = '';
 
-      const result = await model.generateContent(extractionPrompt);
-      const responseText = result.response.text();
+      for (const modelCandidate of modelsToTry) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelCandidate,
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.1, // Baixa temperatura para extração determinística
+            },
+          });
+
+          const result = await model.generateContent(extractionPrompt);
+          responseText = result.response.text();
+          if (responseText) break;
+        } catch (err) {
+          if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
+            console.warn(`⚠️ [Memory Fallback] Modelo ${modelCandidate} não encontrado, tentando alternativa...`);
+            continue;
+          }
+          throw err;
+        }
+      }
       
       let parsed;
       try {

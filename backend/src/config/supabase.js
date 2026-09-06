@@ -1,7 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import fs from 'fs';
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Tenta carregar o .env de múltiplos locais (funciona em dev com nodemon, Docker e VPS)
+const envCandidates = [
+  path.resolve(__dirname, '../../.env'),    // relativo a src/config/ → backend/.env
+  path.resolve(process.cwd(), '.env'),       // CWD (nodemon executa em backend/)
+  path.resolve(process.cwd(), 'backend/.env'), // CWD na raiz do projeto
+];
+for (const envPath of envCandidates) {
+  if (fs.existsSync(envPath)) { dotenv.config({ path: envPath }); break; }
+}
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

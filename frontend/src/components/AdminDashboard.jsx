@@ -123,31 +123,31 @@ export default function AdminDashboard({ currentUser }) {
   });
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-slate-900 text-stone-800 dark:text-stone-100 p-4 sm:p-8 font-sans transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-stone-50 dark:bg-slate-900 text-stone-800 dark:text-stone-100 p-3.5 sm:p-8 font-sans transition-colors duration-300">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         {/* CABEÇALHO DO PAINEL */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200/80 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 sm:pb-6 border-b border-stone-200/80 dark:border-slate-800">
           <div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400">
-                <Shield className="w-5 h-5 stroke-[1.75]" />
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shrink-0">
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50 tracking-tight">
-                Painel de Gestão da Mentoria
+              <h1 className="text-xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50 tracking-tight">
+                Painel de Gestão
               </h1>
-              <span className="px-3 py-0.5 rounded-full text-xs font-serif bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/40">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-serif bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/40">
                 SUPER ADMIN
               </span>
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-serif">
+            <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-1 font-serif">
               Acompanhamento de usuários, histórico de reflexões e especialização de mentores
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setActiveTab('help')}
-              className={`px-3.5 py-2 rounded-2xl border text-xs font-medium transition flex items-center gap-2 shadow-sm ${
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border text-xs font-medium transition flex items-center gap-1.5 sm:gap-2 shadow-sm active:scale-95 ${
                 activeTab === 'help'
                   ? 'bg-teal-700 text-white border-teal-700'
                   : 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-amber-200/80 dark:border-amber-800/60 text-amber-800 dark:text-amber-300'
@@ -160,79 +160,79 @@ export default function AdminDashboard({ currentUser }) {
             <button
               onClick={loadAllData}
               disabled={refreshing}
-              className="px-4 py-2 rounded-2xl bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 border border-stone-200 dark:border-slate-700 text-xs font-medium text-stone-700 dark:text-stone-300 transition flex items-center gap-2 shadow-sm"
+              className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 border border-stone-200 dark:border-slate-700 text-xs font-medium text-stone-700 dark:text-stone-300 transition flex items-center gap-1.5 sm:gap-2 shadow-sm active:scale-95"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-teal-700' : ''}`} />
-              <span>Atualizar Dados</span>
+              <span>Atualizar</span>
             </button>
           </div>
         </div>
 
         {feedbackMsg && (
-          <div className="p-4 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 animate-fadeIn">
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 animate-fadeIn">
             <CheckCircle className="w-4 h-4 shrink-0" />
             <span>{feedbackMsg}</span>
           </div>
         )}
 
         {/* CARTÕES DE MÉTRICAS NO ESTILO DO SANTUÁRIO */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm">
-            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 mb-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div className="p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm">
+            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 mb-1.5 sm:mb-2">
               <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Usuários</span>
               <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-700 dark:text-teal-400" />
             </div>
-            <span className="text-2xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50">
+            <span className="text-xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50">
               {metrics?.totalUsers ?? '...'}
             </span>
-            <span className="block text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 mt-1">
+            <span className="block text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 mt-0.5 sm:mt-1">
               Refúgios ativos
             </span>
           </div>
 
-          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm">
-            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 mb-2">
+          <div className="p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm">
+            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 mb-1.5 sm:mb-2">
               <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Lembranças</span>
               <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-700 dark:text-amber-400" />
             </div>
-            <span className="text-2xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50">
+            <span className="text-xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50">
               {metrics?.totalMemories ?? '...'}
             </span>
-            <span className="block text-[10px] sm:text-[11px] text-teal-800 dark:text-teal-400 mt-1 font-serif">
-              Bloqueios memorizados
+            <span className="block text-[10px] sm:text-[11px] text-teal-800 dark:text-teal-400 mt-0.5 sm:mt-1 font-serif">
+              Bloqueios gravados
             </span>
           </div>
 
-          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm">
-            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 mb-2">
+          <div className="p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm">
+            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 mb-1.5 sm:mb-2">
               <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Mentores</span>
               <Compass className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-800 dark:text-teal-400" />
             </div>
-            <span className="text-2xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50">
+            <span className="text-xl sm:text-3xl font-serif font-medium text-stone-900 dark:text-stone-50">
               {metrics?.totalAgents ?? '...'}
             </span>
-            <span className="block text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 mt-1">
+            <span className="block text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 mt-0.5 sm:mt-1">
               Izaque & Especialistas
             </span>
           </div>
 
-          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm">
-            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 mb-2">
+          <div className="p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm">
+            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 mb-1.5 sm:mb-2">
               <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Status</span>
               <Feather className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-700 dark:text-teal-400" />
             </div>
-            <span className="text-sm sm:text-base font-serif font-medium text-teal-800 dark:text-teal-300 flex items-center gap-2">
+            <span className="text-xs sm:text-base font-serif font-medium text-teal-800 dark:text-teal-300 flex items-center gap-1.5 sm:gap-2">
               <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-teal-600 dark:bg-teal-400 animate-pulse" />
               Sessões Ativas
             </span>
-            <span className="block text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 mt-1">
-              Escuta e voz disponíveis
+            <span className="block text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 mt-0.5 sm:mt-1">
+              Escuta disponível
             </span>
           </div>
         </div>
 
         {/* NAVEGAÇÃO DE ABAS RESPONSIVA COM SWIPE NO MOBILE */}
-        <div className="flex overflow-x-auto pb-1 max-w-full -mx-2 px-2 sm:mx-0 sm:px-0">
+        <div className="flex overflow-x-auto pb-1 max-w-full -mx-2 px-2 sm:mx-0 sm:px-0 no-scrollbar">
           <div className="inline-flex p-1.5 rounded-2xl bg-stone-200/60 dark:bg-slate-800/60 border border-stone-300/50 dark:border-slate-700/50 text-xs font-medium whitespace-nowrap shrink-0">
             <button
               onClick={() => setActiveTab('users')}

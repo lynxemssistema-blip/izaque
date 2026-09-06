@@ -641,14 +641,14 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       />
 
       {/* HEADER DA SESSÃO */}
-      <header className="px-3 sm:px-6 py-2.5 sm:py-3.5 pt-safe border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2.5 sm:gap-3">
+      <header className="px-3 sm:px-6 py-2 sm:py-3.5 pt-safe border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between shrink-0 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {onBackToHome && (
             <button
               type="button"
               onClick={onBackToHome}
               title="Voltar para o Início"
-              className="md:hidden p-1.5 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 rounded-xl hover:bg-stone-200/50 dark:hover:bg-slate-800 transition"
+              className="md:hidden p-2 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 rounded-xl hover:bg-stone-200/50 dark:hover:bg-slate-800 transition min-w-[40px] min-h-[40px] flex items-center justify-center shrink-0 active:scale-95"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -656,24 +656,24 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shrink-0">
             <Feather className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
           </div>
-          <div>
-            <h2 className="text-sm sm:text-base font-serif font-medium text-stone-900 dark:text-stone-50 leading-tight">
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-base font-serif font-medium text-stone-900 dark:text-stone-50 leading-tight truncate">
               Sessão com {guideName}
             </h2>
-            <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400" />
+            <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5 mt-0.5 truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400 shrink-0" />
               Mentoria ativa • Escuta atenta
             </p>
           </div>
         </div>
 
         {/* BOTÃO DE PREFERÊNCIAS & SOM */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
             title="Preferências de voz, nome e som ambiente"
-            className="px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-600 dark:text-stone-300 text-xs font-medium transition flex items-center gap-1.5 border border-stone-200 dark:border-slate-700 shadow-sm"
+            className="p-2 sm:px-3 sm:py-1.5 rounded-full bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-600 dark:text-stone-300 text-xs font-medium transition flex items-center gap-1.5 border border-stone-200 dark:border-slate-700 shadow-sm active:scale-95 min-h-[36px] min-w-[36px] justify-center"
           >
             <Sliders className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
             <span className="hidden sm:inline">Preferências</span>
@@ -821,12 +821,12 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       </main>
 
       {/* FOOTER DE ENTRADA RESPONSIVO */}
-      <footer className="p-2.5 sm:p-4 border-t border-stone-200/80 dark:border-slate-800 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
+      <footer className="p-2 sm:p-3.5 pb-safe border-t border-stone-200/80 dark:border-slate-800 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
         {isRecording ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4"
+            className="p-2.5 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4"
           >
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping shrink-0" />
@@ -845,14 +845,14 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
               <button
                 type="button"
                 onClick={cancelAudioRecording}
-                className="px-3 py-2 rounded-xl text-xs text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition min-h-[40px]"
+                className="px-3 py-2 rounded-xl text-xs text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition min-h-[40px] active:scale-95"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={stopAudioRecording}
-                className="px-4 py-2 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-medium flex items-center gap-1.5 shadow-sm transition min-h-[40px]"
+                className="px-4 py-2 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-medium flex items-center gap-1.5 shadow-sm transition min-h-[40px] active:scale-95"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Enviar Áudio</span>
@@ -873,16 +873,16 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
               }}
               placeholder="O que está pesando na mente ou coração? Desabafe aqui..."
               disabled={isReflecting}
-              className="w-full resize-none px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 focus:border-teal-700 dark:focus:border-teal-400 focus:ring-1 focus:ring-teal-700 text-base sm:text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none leading-relaxed transition pr-24 shadow-sm"
+              className="w-full resize-none px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 focus:border-teal-700 dark:focus:border-teal-400 focus:ring-1 focus:ring-teal-700 text-base sm:text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none leading-relaxed transition pr-22 sm:pr-26 shadow-sm"
             />
 
-            <div className="absolute right-2.5 sm:right-3.5 flex items-center gap-1">
+            <div className="absolute right-2 sm:right-3 flex items-center gap-1">
               <button
                 type="button"
                 onClick={startAudioRecording}
                 disabled={isReflecting}
                 title="Gravar desabafo em áudio (com transcrição automática)"
-                className="p-2 sm:p-2.5 rounded-full text-stone-500 hover:text-teal-800 dark:hover:text-teal-400 hover:bg-stone-100 dark:hover:bg-slate-700 transition min-w-[38px] min-h-[38px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center"
+                className="p-2 sm:p-2.5 rounded-full text-stone-500 hover:text-teal-800 dark:hover:text-teal-400 hover:bg-stone-100 dark:hover:bg-slate-700 transition min-w-[38px] min-h-[38px] sm:min-w-[42px] sm:min-h-[42px] flex items-center justify-center active:scale-95"
               >
                 <Mic className="w-4 h-4" />
               </button>
@@ -891,7 +891,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
                 type="submit"
                 disabled={isReflecting || !inputVal.trim()}
                 title="Enviar desabafo"
-                className="p-2 sm:p-2.5 rounded-full bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white shadow-md shadow-teal-700/20 disabled:opacity-40 transition flex items-center justify-center min-w-[38px] min-h-[38px] sm:min-w-[44px] sm:min-h-[44px]"
+                className="p-2 sm:p-2.5 rounded-full bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white shadow-md shadow-teal-700/20 disabled:opacity-40 transition flex items-center justify-center min-w-[38px] min-h-[38px] sm:min-w-[42px] sm:min-h-[42px] active:scale-95"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -899,7 +899,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
           </form>
         )}
 
-        <div className="mt-1.5 text-center">
+        <div className="mt-1 text-center hidden sm:block">
           <span className="text-[10px] text-stone-400 dark:text-stone-500">
             Pressione Enter para enviar • Áudio transcrito automaticamente • Total sigilo
           </span>

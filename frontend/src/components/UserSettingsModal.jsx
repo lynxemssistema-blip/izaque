@@ -181,25 +181,28 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-stone-900/60 backdrop-blur-md pt-safe pb-safe">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-stone-900/60 backdrop-blur-md pt-safe">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 14 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: -14 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-xl bg-stone-50 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl sm:rounded-4xl p-5 sm:p-8 shadow-2xl text-stone-800 dark:text-stone-100 relative max-h-[90dvh] overflow-y-auto"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 30 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-xl bg-stone-50 dark:bg-slate-900 border-t sm:border border-stone-200 dark:border-slate-800 rounded-t-3xl sm:rounded-4xl p-4 sm:p-8 shadow-2xl text-stone-800 dark:text-stone-100 relative max-h-[88dvh] overflow-y-auto overscroll-contain pb-safe sm:pb-8"
       >
+        {/* Barra de Arraste visual (Mobile Native Pull-bar) */}
+        <div className="w-12 h-1 bg-stone-300 dark:bg-slate-700 rounded-full mx-auto mb-3 sm:hidden" />
+
         {/* CABEÇALHO */}
-        <div className="flex items-center justify-between pb-4 border-b border-stone-200/80 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400">
-              <SlidersHorizontal className="w-5 h-5 stroke-[1.75]" />
+        <div className="flex items-center justify-between pb-3.5 sm:pb-4 border-b border-stone-200/80 dark:border-slate-800">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shrink-0">
+              <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
             </div>
             <div>
-              <h3 className="text-base font-serif font-medium text-stone-900 dark:text-stone-50">
+              <h3 className="text-sm sm:text-base font-serif font-medium text-stone-900 dark:text-stone-50">
                 Preferências da Mentoria
               </h3>
-              <p className="text-xs text-stone-500 dark:text-stone-400">
+              <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400">
                 Personalize sua imersão, sons e a voz do seu mentor
               </p>
             </div>
@@ -210,7 +213,7 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
               humanVoiceService.stop();
               onClose();
             }}
-            className="p-2 rounded-xl text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-slate-800 transition"
+            className="p-2 rounded-xl text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-slate-800 transition min-w-[38px] min-h-[38px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>

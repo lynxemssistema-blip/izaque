@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '../config/supabase.js';
-import { genAI, CHAT_MODEL } from '../config/gemini.js';
+import { genAI, CHAT_MODEL, FALLBACK_CHAT_MODELS } from '../config/gemini.js';
 
 /**
  * Controller Administrativo (Exclusivo para Super Admin / Master)
@@ -220,17 +220,34 @@ export async function uploadAgentDocument(req, res) {
     // Se o arquivo for binário (ex: PDF ou documento), extrai texto integralmente via Gemini Multimodal
     if (fileBase64 && (!finalContent || finalContent.trim().length === 0)) {
       console.log(`📑 [Agent Grounding] Extraindo texto de documento binário via Gemini (${mimeType || 'application/pdf'})...`);
-      const model = genAI.getGenerativeModel({ model: CHAT_MODEL });
-      const extractRes = await model.generateContent([
-        {
-          inlineData: {
-            data: fileBase64,
-            mimeType: mimeType || 'application/pdf',
-          },
-        },
-        'Você é um extrator de literatura técnica, livros e manuais para especialização de IA. Extraia e transcreva integralmente todo o conteúdo textual, tópicos, definições, frameworks e metodologias deste arquivo em português claro. Não faça resumos, preserve o texto completo.',
-      ]);
-      finalContent = extractRes.response.text();
+      const modelsToTry = [CHAT_MODEL, ...(FALLBACK_CHAT_MODELS || [])].filter((m, i, arr) => arr.indexOf(m) === i);
+      let extractedSuccess = false;
+
+      for (const modelCandidate of modelsToTry) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelCandidate });
+          const extractRes = await model.generateContent([
+            {
+              inlineData: {
+                data: fileBase64,
+                mimeType: mimeType || 'application/pdf',
+              },
+            },
+            'Você é um extrator de literatura técnica, livros e manuais para especialização de IA. Extraia e transcreva integralmente todo o conteúdo textual, tópicos, definições, frameworks e metodologias deste arquivo em português claro. Não faça resumos, preserve o texto completo.',
+          ]);
+          finalContent = extractRes.response.text();
+          if (finalContent) {
+            extractedSuccess = true;
+            break;
+          }
+        } catch (mErr) {
+          if (mErr.message && (mErr.message.includes('404') || mErr.message.includes('not found'))) {
+            console.warn(`⚠️ [Document Fallback] Modelo ${modelCandidate} não encontrado, tentando alternativa...`);
+            continue;
+          }
+          throw mErr;
+        }
+      }
     }
 
     if (!finalContent || finalContent.trim().length === 0) {

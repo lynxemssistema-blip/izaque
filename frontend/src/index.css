@@ -51,9 +51,31 @@
   padding-bottom: max(0.875rem, env(safe-area-inset-bottom, 0px));
 }
 
+.pl-safe {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+}
+
+.pr-safe {
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+
 .h-ios-dvh {
   height: 100vh;
   height: 100dvh;
+}
+
+.min-h-ios-dvh {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Ocultar barra de rolagem mantendo a funcionalidade de swipe */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Scrollbar suave e sutil que não chama atenção */

@@ -111,24 +111,27 @@ export default function UserProfileModal({ isOpen, onClose, user, profile, onPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg p-6 sm:p-8 bg-stone-50 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl sm:rounded-4xl shadow-2xl text-stone-800 dark:text-stone-100 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-stone-900/60 backdrop-blur-md pt-safe animate-fadeIn">
+      <div className="relative w-full max-w-lg p-5 sm:p-8 bg-stone-50 dark:bg-slate-900 border-t sm:border border-stone-200 dark:border-slate-800 rounded-t-3xl sm:rounded-4xl shadow-2xl text-stone-800 dark:text-stone-100 max-h-[88dvh] overflow-y-auto overscroll-contain pb-safe sm:pb-8">
+        {/* Barra de Arraste visual (Mobile Native Pull-bar) */}
+        <div className="w-12 h-1 bg-stone-300 dark:bg-slate-700 rounded-full mx-auto mb-3 sm:hidden" />
+
         {/* BOTÃO FECHAR */}
         <button
           onClick={onClose}
           type="button"
-          className="absolute top-5 right-5 p-2 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-full hover:bg-stone-200/50 dark:hover:bg-slate-800 transition"
+          className="absolute top-5 right-5 p-2 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-full hover:bg-stone-200/50 dark:hover:bg-slate-800 transition min-w-[36px] min-h-[36px] flex items-center justify-center"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* CABEÇALHO */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-5 sm:mb-6">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 border border-teal-200/80 dark:border-teal-800/40 text-teal-800 dark:text-teal-300 text-xs font-serif mb-2">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Refúgio Pessoal & Identidade</span>
           </div>
-          <h2 className="text-2xl font-serif font-medium tracking-tight text-stone-900 dark:text-stone-50">
+          <h2 className="text-xl sm:text-2xl font-serif font-medium tracking-tight text-stone-900 dark:text-stone-50">
             Meu Perfil
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-serif">
@@ -210,7 +213,7 @@ export default function UserProfileModal({ isOpen, onClose, user, profile, onPro
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Como prefere ser chamado?"
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 focus:border-teal-700 dark:focus:border-teal-400 focus:ring-1 focus:ring-teal-700 text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none transition shadow-sm"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 focus:border-teal-700 dark:focus:border-teal-400 focus:ring-1 focus:ring-teal-700 text-base sm:text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none transition shadow-sm"
               />
             </div>
             <span className="text-[10px] text-stone-400 dark:text-stone-500 mt-1 block">
@@ -230,7 +233,7 @@ export default function UserProfileModal({ isOpen, onClose, user, profile, onPro
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(DDD) 99999-9999"
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 focus:border-teal-700 dark:focus:border-teal-400 focus:ring-1 focus:ring-teal-700 text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none transition shadow-sm"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 focus:border-teal-700 dark:focus:border-teal-400 focus:ring-1 focus:ring-teal-700 text-base sm:text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none transition shadow-sm"
               />
             </div>
             <span className="text-[10px] text-stone-400 dark:text-stone-500 mt-1 block">

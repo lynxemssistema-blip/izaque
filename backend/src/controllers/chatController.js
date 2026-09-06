@@ -1,4 +1,4 @@
-import { genAI, CHAT_MODEL } from '../config/gemini.js';
+import { genAI, CHAT_MODEL, FALLBACK_CHAT_MODELS } from '../config/gemini.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { generateEmbedding, searchMemories, formatMemoriesForPrompt } from '../services/memoryService.js';
 import { extractAndSaveMemoryAsync } from '../services/extractionService.js';
@@ -129,12 +129,25 @@ DIRETRIZES:
 
 Retorne EXCLUSIVAMENTE o ID ou Slug do especialista escolhido. Não inclua explicações ou texto extra.`;
 
-      const routerModel = genAI.getGenerativeModel({
-        model: CHAT_MODEL,
-        generationConfig: { temperature: 0.1 },
-      });
-      const routerResult = await routerModel.generateContent(routerPrompt);
-      const chosenText = routerResult.response.text().trim();
+      let chosenText = '';
+      const routerCandidateModels = [CHAT_MODEL, ...(FALLBACK_CHAT_MODELS || [])].filter((m, i, arr) => arr.indexOf(m) === i);
+      for (const rModel of routerCandidateModels) {
+        try {
+          const routerModel = genAI.getGenerativeModel({
+            model: rModel,
+            generationConfig: { temperature: 0.1 },
+          });
+          const routerResult = await routerModel.generateContent(routerPrompt);
+          chosenText = routerResult.response.text().trim();
+          if (chosenText) break;
+        } catch (rErr) {
+          if (rErr.message && (rErr.message.includes('404') || rErr.message.includes('not found'))) {
+            console.warn(`⚠️ [Router Fallback] Modelo ${rModel} não encontrado, tentando alternativa...`);
+            continue;
+          }
+          break;
+        }
+      }
 
       // Busca por ID exato, slug exato, ou substring limpa
       let autoPicked = allAgents.find(a => a.id === chosenText || a.slug === chosenText);
@@ -224,19 +237,41 @@ DIRETRIZES DO IZAQUE (OTIMIZADO PARA FALA HUMANA E ACOLHIMENTO):
     }
   }
 
-  // 5. Gera a resposta com Gemini
-  const model = genAI.getGenerativeModel({
-    model: CHAT_MODEL,
-    systemInstruction: fullSystemInstruction,
-    generationConfig: {
-      temperature: Number(selectedAgent.temperature) || 0.7,
-      maxOutputTokens: 1500,
-    },
-  });
+  // 5. Gera a resposta com Gemini (com fallback resiliente para garantir 100% de disponibilidade)
+  const modelsToTry = [CHAT_MODEL, ...(FALLBACK_CHAT_MODELS || [])].filter((m, i, arr) => arr.indexOf(m) === i);
+  let replyText = '';
+  let lastChatError = null;
 
-  const chatSession = model.startChat({ history: recentHistory });
-  const result = await chatSession.sendMessage(message);
-  const replyText = result.response.text();
+  for (const modelCandidate of modelsToTry) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelCandidate,
+        systemInstruction: fullSystemInstruction,
+        generationConfig: {
+          temperature: Number(selectedAgent.temperature) || 0.7,
+          maxOutputTokens: 1500,
+        },
+      });
+
+      const chatSession = model.startChat({ history: recentHistory });
+      const result = await chatSession.sendMessage(message);
+      replyText = result.response.text();
+      lastChatError = null;
+      if (replyText) break;
+    } catch (err) {
+      lastChatError = err;
+      const isNotFound = err.message && (err.message.includes('404') || err.message.includes('not found'));
+      if (isNotFound) {
+        console.warn(`⚠️ [Gemini Chat Fallback] Modelo "${modelCandidate}" retornou 404. Tentando próximo modelo...`);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (lastChatError) {
+    throw lastChatError;
+  }
 
   // 6. Extração assíncrona de novos bloqueios em background
   extractAndSaveMemoryAsync(userId, message, replyText);
@@ -305,7 +340,11 @@ export async function handleChatMessage(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ [IZAQUE Chat] Erro ao processar mensagem:', error);
+    console.error('❌ [IZAQUE Chat] Erro ao processar mensagem:');
+    console.error('   message:', error.message);
+    console.error('   status:', error.status);
+    console.error('   stack:', error.stack?.split('\n')[1]);
+    if (error.errorDetails) console.error('   details:', JSON.stringify(error.errorDetails));
     res.status(500).json({ error: 'Erro ao processar mensagem.', details: error.message });
   }
 }

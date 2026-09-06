@@ -26,19 +26,19 @@ export default function LandingPage({ onStartChat, user }) {
       </div>
 
       {/* 1. SEÇÃO PRINCIPAL (HERO) */}
-      <section className="relative pt-20 sm:pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
+      <section className="relative pt-12 sm:pt-28 pb-14 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
         {/* Pílula de Acolhimento */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-stone-200/70 dark:bg-slate-800/80 border border-stone-300/60 dark:border-slate-700/80 text-xs text-stone-600 dark:text-stone-300 mb-8 backdrop-blur-md shadow-sm">
+        <div className="inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-stone-200/70 dark:bg-slate-800/80 border border-stone-300/60 dark:border-slate-700/80 text-[11px] sm:text-xs text-stone-600 dark:text-stone-300 mb-6 sm:mb-8 backdrop-blur-md shadow-sm">
           <span className="flex h-2 w-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-pulse" />
           <span className="font-serif font-medium text-teal-800 dark:text-teal-300">
             Mentoria de Clareza & Desenvolvimento
           </span>
-          <span>•</span>
-          <span>Um espaço seguro para desacelerar e se reencontrar</span>
+          <span className="hidden sm:inline">•</span>
+          <span className="hidden sm:inline">Um espaço seguro para desacelerar e se reencontrar</span>
         </div>
 
         {/* Título Principal Humanizado */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-serif font-normal tracking-tight text-stone-900 dark:text-stone-50 max-w-4xl mx-auto leading-[1.18]">
+        <h1 className="text-3xl sm:text-5xl lg:text-7xl font-serif font-normal tracking-tight text-stone-900 dark:text-stone-50 max-w-4xl mx-auto leading-[1.18]">
           Desate os nós da sua mente.{' '}
           <span className="italic font-medium text-teal-800 dark:text-teal-300">
             Cure a hesitação.
@@ -47,47 +47,47 @@ export default function LandingPage({ onStartChat, user }) {
         </h1>
 
         {/* Descrição Apresentando Izaque */}
-        <p className="mt-6 text-base sm:text-xl text-stone-600 dark:text-stone-300 max-w-2xl mx-auto leading-relaxed font-serif">
+        <p className="mt-5 sm:mt-6 text-sm sm:text-lg lg:text-xl text-stone-600 dark:text-stone-300 max-w-2xl mx-auto leading-relaxed font-serif">
           Conheça <strong>Izaque</strong>: um mentor de presença calma e escuta profunda, dedicado a ajudar você a compreender bloqueios emocionais, quebrar ciclos de autossabotagem e reconstruir a confiança no seu caminho.
         </p>
 
         {/* Chamadas para Ação */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
           <button
             onClick={onStartChat}
-            className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-xl shadow-teal-700/25 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-3"
+            className="w-full sm:w-auto px-7 sm:px-9 py-3.5 sm:py-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-xl shadow-teal-700/25 transition-all duration-300 transform active:scale-95 sm:hover:-translate-y-0.5 flex items-center justify-center gap-2.5 sm:gap-3"
           >
             <Feather className="w-4 h-4 stroke-[2]" />
-            <span>{user ? 'Acessar Minha Mentoria com Izaque' : 'Conversar com Izaque'}</span>
+            <span>{user ? 'Acessar Minha Mentoria' : 'Conversar com Izaque'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 
           <a
             href="#quem-e-izaque"
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-stone-200 font-medium text-sm transition flex items-center justify-center gap-2 shadow-sm"
+            className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-stone-200 font-medium text-sm transition flex items-center justify-center gap-2 shadow-sm active:scale-95"
           >
-            <span>Conheça os Pilares da Jornada</span>
+            <span>Conheça os Pilares</span>
             <ChevronRight className="w-4 h-4 text-stone-400" />
           </a>
         </div>
 
         {/* CARTÕES DE SENSAÇÕES TERAPÊUTICAS */}
-        <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto pt-10 border-t border-stone-200 dark:border-slate-800">
-          <div className="p-4 rounded-3xl bg-white/60 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 shadow-sm">
-            <span className="block text-2xl font-serif font-medium text-teal-800 dark:text-teal-400">100%</span>
-            <span className="text-xs text-stone-500 dark:text-stone-400 mt-1 block">Sigilo & Segurança</span>
+        <div className="mt-12 sm:mt-16 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 max-w-3xl mx-auto pt-8 sm:pt-10 border-t border-stone-200 dark:border-slate-800">
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 shadow-sm">
+            <span className="block text-xl sm:text-2xl font-serif font-medium text-teal-800 dark:text-teal-400">100%</span>
+            <span className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 sm:mt-1 block">Sigilo & Segurança</span>
           </div>
-          <div className="p-4 rounded-3xl bg-white/60 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 shadow-sm">
-            <span className="block text-2xl font-serif font-medium text-stone-800 dark:text-stone-200">Sem Pressa</span>
-            <span className="text-xs text-stone-500 dark:text-stone-400 mt-1 block">No seu próprio tempo</span>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 shadow-sm">
+            <span className="block text-xl sm:text-2xl font-serif font-medium text-stone-800 dark:text-stone-200">Sem Pressa</span>
+            <span className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 sm:mt-1 block">No seu próprio tempo</span>
           </div>
-          <div className="p-4 rounded-3xl bg-white/60 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 shadow-sm">
-            <span className="block text-2xl font-serif font-medium text-amber-700 dark:text-amber-400">Memória</span>
-            <span className="text-xs text-stone-500 dark:text-stone-400 mt-1 block">Evolução contínua</span>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 shadow-sm">
+            <span className="block text-xl sm:text-2xl font-serif font-medium text-amber-700 dark:text-amber-400">Memória</span>
+            <span className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 sm:mt-1 block">Evolução contínua</span>
           </div>
-          <div className="p-4 rounded-3xl bg-white/60 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 shadow-sm">
-            <span className="block text-2xl font-serif font-medium text-stone-800 dark:text-stone-200">Zero</span>
-            <span className="text-xs text-stone-500 dark:text-stone-400 mt-1 block">Julgamento ou crítica</span>
+          <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/60 dark:bg-slate-800/40 border border-stone-200/80 dark:border-slate-700/60 shadow-sm">
+            <span className="block text-xl sm:text-2xl font-serif font-medium text-stone-800 dark:text-stone-200">Zero</span>
+            <span className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 sm:mt-1 block">Julgamento ou crítica</span>
           </div>
         </div>
       </section>
@@ -107,42 +107,42 @@ export default function LandingPage({ onStartChat, user }) {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
             {/* Pilar 1 */}
-            <div className="p-8 rounded-4xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700/70 shadow-sm space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400">
-                <Heart className="w-6 h-6 stroke-[1.75]" />
+            <div className="p-6 sm:p-8 rounded-3xl sm:rounded-4xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700/70 shadow-sm space-y-3 sm:space-y-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400">
+                <Heart className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
               </div>
-              <h3 className="text-xl font-serif font-medium text-stone-900 dark:text-stone-100">
+              <h3 className="text-lg sm:text-xl font-serif font-medium text-stone-900 dark:text-stone-100">
                 Escuta Atenta e Contínua
               </h3>
-              <p className="text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
+              <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
                 Izaque recorda os seus medos, desabafos e metas de encontros anteriores. Cada conversa dá continuidade natural à sua história, sem você precisar recomeçar do zero.
               </p>
             </div>
 
             {/* Pilar 2 */}
-            <div className="p-8 rounded-4xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700/70 shadow-sm space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-700/10 dark:bg-amber-500/15 border border-amber-700/20 dark:border-amber-500/30 flex items-center justify-center text-amber-800 dark:text-amber-400">
-                <Compass className="w-6 h-6 stroke-[1.75]" />
+            <div className="p-6 sm:p-8 rounded-3xl sm:rounded-4xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700/70 shadow-sm space-y-3 sm:space-y-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-700/10 dark:bg-amber-500/15 border border-amber-700/20 dark:border-amber-500/30 flex items-center justify-center text-amber-800 dark:text-amber-400">
+                <Compass className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
               </div>
-              <h3 className="text-xl font-serif font-medium text-stone-900 dark:text-stone-100">
+              <h3 className="text-lg sm:text-xl font-serif font-medium text-stone-900 dark:text-stone-100">
                 Desarmamento de Bloqueios
               </h3>
-              <p className="text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
+              <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
                 Muitas vezes, a autossabotagem e o medo de prosperar vêm de crenças antigas de escassez e culpa. Izaque ajuda você a iluminar esses pontos cegos com clareza.
               </p>
             </div>
 
             {/* Pilar 3 */}
-            <div className="p-8 rounded-4xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700/70 shadow-sm space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400">
-                <Wind className="w-6 h-6 stroke-[1.75]" />
+            <div className="p-6 sm:p-8 rounded-3xl sm:rounded-4xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700/70 shadow-sm space-y-3 sm:space-y-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400">
+                <Wind className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
               </div>
-              <h3 className="text-xl font-serif font-medium text-stone-900 dark:text-stone-100">
+              <h3 className="text-lg sm:text-xl font-serif font-medium text-stone-900 dark:text-stone-100">
                 Ação Serena e Firme
               </h3>
-              <p className="text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
+              <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
                 Chega de ansiedade paralisante. Cada encontro termina com passos práticos, leves e aplicáveis no mundo real para suas decisões financeiras, relacionamentos e carreira.
               </p>
             </div>
@@ -209,24 +209,24 @@ export default function LandingPage({ onStartChat, user }) {
       </section>
 
       {/* 4. CONVITE FINAL DE ENTRADA NA MENTORIA */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">
-        <div className="p-10 sm:p-14 rounded-4xl bg-stone-100/90 dark:bg-slate-800/70 border border-stone-200 dark:border-slate-700 shadow-xl space-y-6">
-          <div className="w-14 h-14 rounded-3xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 mx-auto">
-            <Feather className="w-7 h-7 stroke-[1.75]" />
+      <section className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">
+        <div className="p-6 sm:p-14 rounded-3xl sm:rounded-4xl bg-stone-100/90 dark:bg-slate-800/70 border border-stone-200 dark:border-slate-700 shadow-xl space-y-5 sm:space-y-6">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl sm:rounded-3xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 mx-auto">
+            <Feather className="w-6 h-6 sm:w-7 sm:h-7 stroke-[1.75]" />
           </div>
 
-          <h2 className="text-3xl sm:text-4xl font-serif font-normal text-stone-900 dark:text-stone-50 max-w-xl mx-auto">
+          <h2 className="text-2xl sm:text-4xl font-serif font-normal text-stone-900 dark:text-stone-50 max-w-xl mx-auto leading-snug">
             O primeiro passo para destravar é ter a coragem de desabafar.
           </h2>
 
-          <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 font-serif max-w-md mx-auto leading-relaxed">
+          <p className="text-xs sm:text-base text-stone-600 dark:text-stone-300 font-serif max-w-md mx-auto leading-relaxed">
             Respire fundo. Não há nada a provar aqui dentro. Seu mentor está pronto para ouvir o que você precisa dizer.
           </p>
 
           <div className="pt-2">
             <button
               onClick={onStartChat}
-              className="px-9 py-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-xl shadow-teal-700/25 transition duration-300 inline-flex items-center gap-2"
+              className="w-full sm:w-auto px-7 sm:px-9 py-3.5 sm:py-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-xl shadow-teal-700/25 transition duration-300 inline-flex items-center justify-center gap-2 active:scale-95"
             >
               <span>{user ? 'Acessar Mentoria' : 'Começar Minha Sessão Agora'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -236,7 +236,7 @@ export default function LandingPage({ onStartChat, user }) {
       </section>
 
       {/* RODAPÉ DISCRETO */}
-      <footer className="py-8 border-t border-stone-200/80 dark:border-slate-800 text-center text-xs text-stone-400 dark:text-stone-500 font-serif">
+      <footer className="py-8 px-4 border-t border-stone-200/80 dark:border-slate-800 text-center text-xs text-stone-400 dark:text-stone-500 font-serif">
         <p>Mentoria IZAQUE • Espaço de Clareza, Escuta Atenta e Desenvolvimento Pessoal</p>
       </footer>
     </div>
