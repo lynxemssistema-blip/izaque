@@ -40,10 +40,14 @@ export async function handleForgotPassword(req, res) {
       });
     }
 
-    const resetLink = linkData?.properties?.action_link;
-    if (!resetLink) {
-      throw new Error('Não foi possível gerar o link de recuperação.');
+    const hashedToken = linkData?.properties?.hashed_token;
+    if (!hashedToken) {
+      throw new Error('Não foi possível gerar o token de recuperação.');
     }
+
+    // Link direto apontando para o app IZAQUE (izaque.lynxems.com.br)
+    // Evita o redirecionamento padrão do Supabase que apontava para lynxems.com.br
+    const resetLink = `${appUrl}/?token_hash=${hashedToken}&type=recovery`;
 
     // 3. Dispara o e-mail oficial através do SMTP Hostinger (suporte@lynxems.com.br)
     await sendPasswordResetEmail({

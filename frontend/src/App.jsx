@@ -17,6 +17,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('landing'); // 'landing' | 'chat' | 'admin'
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+  const [resetTokenHash, setResetTokenHash] = useState('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -92,7 +93,11 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search);
       const hash = window.location.hash || '';
-      if (searchParams.get('mode') === 'reset-password' || hash.includes('type=recovery')) {
+      const tokenHash = searchParams.get('token_hash');
+      if (tokenHash) {
+        setResetTokenHash(tokenHash);
+        setIsResetPasswordOpen(true);
+      } else if (searchParams.get('mode') === 'reset-password' || hash.includes('type=recovery')) {
         setIsResetPasswordOpen(true);
       }
     }
@@ -279,7 +284,12 @@ export default function App() {
       {/* MODAL DE REDEFINIÇÃO DE SENHA (RECUPERAÇÃO VIA E-MAIL OFICIAL) */}
       <ResetPasswordModal
         isOpen={isResetPasswordOpen}
-        onClose={() => setIsResetPasswordOpen(false)}
+        tokenHash={resetTokenHash}
+        onClose={() => {
+          setIsResetPasswordOpen(false);
+          setResetTokenHash('');
+        }}
+        onOpenForgot={() => setIsAuthOpen(true)}
       />
 
       {/* MODAL DE PERFIL DO USUÁRIO (FOTO, NOME, WHATSAPP) */}
