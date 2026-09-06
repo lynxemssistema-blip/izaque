@@ -32,6 +32,7 @@ import {
   fetchChatHistory,
   clearChatHistory,
   cleanTextForSpeech,
+  updateUserProfile,
 } from '../services/api';
 import { ambientAudio } from '../services/ambientAudioService';
 import { humanVoiceService } from '../services/voiceService';
@@ -154,6 +155,52 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
   const [isReflecting, setIsReflecting] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // Estado e Controle Rápido do Som Ambiente Terapêutico
+  const [isAmbientActive, setIsAmbientActive] = useState(() => {
+    return localStorage.getItem('izaque_ambient_enabled') === 'true';
+  });
+  const [ambientTrack, setAmbientTrack] = useState(() => {
+    return localStorage.getItem('izaque_ambient_track') || '432hz';
+  });
+
+  // Sincroniza em tempo real se o som ambiente for alterado no modal ou em outra aba
+  useEffect(() => {
+    const syncAmbient = () => {
+      const enabled = localStorage.getItem('izaque_ambient_enabled') === 'true';
+      setIsAmbientActive(enabled);
+      setAmbientTrack(localStorage.getItem('izaque_ambient_track') || '432hz');
+    };
+    window.addEventListener('storage', syncAmbient);
+    return () => window.removeEventListener('storage', syncAmbient);
+  }, []);
+
+  const handleToggleAmbientQuick = () => {
+    const nextState = !isAmbientActive;
+    setIsAmbientActive(nextState);
+    localStorage.setItem('izaque_ambient_enabled', nextState ? 'true' : 'false');
+
+    if (nextState) {
+      const vol = parseFloat(localStorage.getItem('izaque_ambient_volume') || '0.20');
+      const track = localStorage.getItem('izaque_ambient_track') || '432hz';
+      ambientAudio.setVolume(vol);
+      ambientAudio.setTrack(track);
+      ambientAudio.play();
+    } else {
+      ambientAudio.pause();
+    }
+
+    // Sincroniza também no Supabase se o usuário estiver logado
+    if (user?.id) {
+      updateUserProfile(user.id, {
+        preferences: {
+          ambient_enabled: nextState,
+        },
+      }).catch(() => {});
+    }
+
+    window.dispatchEvent(new Event('storage'));
+  };
 
   // Carregar histórico persistente do banco de dados (Supabase izaque_messages)
   useEffect(() => {
@@ -642,6 +689,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       <UserSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        user={user}
         onGuideNameChanged={(name) => setGuideName(name)}
       />
 
@@ -672,16 +720,50 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
           </div>
         </div>
 
-        {/* BOTÃO DE PREFERÊNCIAS & SOM */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* BOTÕES DE CONTROLE: SOM AMBIENTE RÁPIDO & PREFERÊNCIAS */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* ATIVAÇÃO OU DESATIVAÇÃO RÁPIDA DO SOM AMBIENTE */}
+          <button
+            type="button"
+            onClick={handleToggleAmbientQuick}
+            title={
+              isAmbientActive
+                ? `Som Ambiente Ativo (${ambientTrack === 'rain' ? 'Chuva' : '432 Hz'}). Clique para pausar.`
+                : 'Ativar Som Ambiente Terapêutico (Frequência 432 Hz / Chuva)'
+            }
+            className={`px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1.5 border shadow-sm active:scale-95 min-h-[36px] ${
+              isAmbientActive
+                ? 'bg-teal-50 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 border-teal-400 dark:border-teal-700 shadow-teal-700/10'
+                : 'bg-white dark:bg-slate-800 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-slate-700 hover:text-stone-800 dark:hover:text-stone-200 hover:border-stone-300'
+            }`}
+          >
+            {isAmbientActive ? (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400 shrink-0 animate-pulse" />
+                <span className="text-[11px] font-medium hidden xs:inline sm:inline">
+                  {ambientTrack === 'rain' ? 'Chuva' : '432 Hz'}
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-ping shrink-0" />
+              </>
+            ) : (
+              <>
+                <VolumeX className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                <span className="text-[11px] text-stone-500 dark:text-stone-400 hidden xs:inline sm:inline">
+                  Som Ambiente
+                </span>
+              </>
+            )}
+          </button>
+
+          {/* BOTÃO DE PREFERÊNCIAS COMPLETAS */}
           <button
             type="button"
             onClick={() => setIsSettingsOpen(true)}
-            title="Preferências de voz, nome e som ambiente"
+            title="Ajustes de voz, nome e som ambiente"
             className="p-2 sm:px-3 sm:py-1.5 rounded-full bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-600 dark:text-stone-300 text-xs font-medium transition flex items-center gap-1.5 border border-stone-200 dark:border-slate-700 shadow-sm active:scale-95 min-h-[36px] min-w-[36px] justify-center"
           >
             <Sliders className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
-            <span className="hidden sm:inline">Preferências</span>
+            <span className="hidden sm:inline">Ajustes</span>
           </button>
         </div>
       </header>
