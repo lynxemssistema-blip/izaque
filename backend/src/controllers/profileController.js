@@ -36,7 +36,7 @@ export async function getProfile(req, res) {
 export async function updateProfile(req, res) {
   try {
     const { userId } = req.params;
-    const { full_name, phone, avatar_url } = req.body;
+    const { full_name, phone, avatar_url, preferences } = req.body;
 
     if (!userId) {
       return res.status(400).json({ error: 'ID do usuário é obrigatório.' });
@@ -49,6 +49,9 @@ export async function updateProfile(req, res) {
     if (full_name !== undefined) updatePayload.full_name = full_name.trim();
     if (phone !== undefined) updatePayload.phone = phone.trim();
     if (avatar_url !== undefined) updatePayload.avatar_url = avatar_url.trim();
+    if (preferences !== undefined) {
+      updatePayload.preferences = typeof preferences === 'object' && preferences !== null ? preferences : {};
+    }
 
     // 1. Atualiza na tabela public.izaque_profiles
     const { data, error } = await supabaseAdmin
@@ -62,12 +65,14 @@ export async function updateProfile(req, res) {
 
     // 2. Sincroniza também no auth.users metadata para manter compatibilidade
     try {
+      const metaToUpdate = {};
+      if (updatePayload.full_name !== undefined) metaToUpdate.full_name = updatePayload.full_name;
+      if (updatePayload.phone !== undefined) metaToUpdate.phone = updatePayload.phone;
+      if (updatePayload.avatar_url !== undefined) metaToUpdate.avatar_url = updatePayload.avatar_url;
+      if (updatePayload.preferences !== undefined) metaToUpdate.preferences = updatePayload.preferences;
+
       await supabaseAdmin.auth.admin.updateUserById(userId, {
-        user_metadata: {
-          full_name: updatePayload.full_name,
-          phone: updatePayload.phone,
-          avatar_url: updatePayload.avatar_url,
-        },
+        user_metadata: metaToUpdate,
       });
     } catch (metaErr) {
       console.warn('⚠️ Aviso ao sincronizar metadata em auth.users:', metaErr.message);
@@ -77,6 +82,7 @@ export async function updateProfile(req, res) {
       name: updatePayload.full_name,
       phone: updatePayload.phone,
       hasAvatar: Boolean(updatePayload.avatar_url),
+      hasPreferences: Boolean(updatePayload.preferences),
     });
 
     res.status(200).json({

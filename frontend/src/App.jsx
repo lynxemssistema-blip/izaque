@@ -42,6 +42,29 @@ export default function App() {
 
       if (data) {
         setProfile(data);
+        // Sincroniza preferências do banco de dados (Supabase) com o localStorage e estado local
+        if (data.preferences && typeof data.preferences === 'object') {
+          const p = data.preferences;
+          if (p.guide_name) {
+            localStorage.setItem('izaque_guide_name', p.guide_name);
+            setGuideName(p.guide_name);
+          }
+          if (p.ambient_track) localStorage.setItem('izaque_ambient_track', p.ambient_track);
+          if (p.ambient_volume !== undefined) localStorage.setItem('izaque_ambient_volume', p.ambient_volume.toString());
+          if (p.ambient_enabled !== undefined) localStorage.setItem('izaque_ambient_enabled', p.ambient_enabled ? 'true' : 'false');
+          if (p.immersive_voice !== undefined) localStorage.setItem('izaque_immersive_voice', p.immersive_voice ? 'true' : 'false');
+          if (p.voice_engine) localStorage.setItem('izaque_voice_engine', p.voice_engine);
+          if (p.gemini_voice) localStorage.setItem('izaque_gemini_voice', p.gemini_voice);
+          if (p.voice_gender) localStorage.setItem('izaque_voice_gender', p.voice_gender);
+          if (p.voice_rate !== undefined) localStorage.setItem('izaque_voice_rate', p.voice_rate.toString());
+          if (p.voice_pitch !== undefined) localStorage.setItem('izaque_voice_pitch', p.voice_pitch.toString());
+          if (p.voice_uri) localStorage.setItem('izaque_voice_uri', p.voice_uri);
+          if (p.prefer_browser !== undefined) {
+            localStorage.setItem('izaque_voice_prefer_browser', p.prefer_browser ? 'true' : 'false');
+          }
+
+          window.dispatchEvent(new Event('storage'));
+        }
       } else {
         setProfile({
           id: currentUser.id,
@@ -253,6 +276,9 @@ export default function App() {
       <UserSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        user={user}
+        profile={profile}
+        onProfileUpdated={(updated) => setProfile(updated)}
         onGuideNameChanged={(newName) => {
           setGuideName(newName);
           window.dispatchEvent(new Event('storage'));

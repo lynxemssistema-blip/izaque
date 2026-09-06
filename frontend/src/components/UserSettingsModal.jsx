@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -18,13 +18,23 @@ import {
   Mic,
   Smile,
   User,
+  Cpu,
+  Globe,
 } from 'lucide-react';
 import { ambientAudio } from '../services/ambientAudioService';
-import { humanVoiceService } from '../services/voiceService';
+import { humanVoiceService, GEMINI_VOICES } from '../services/voiceService';
+import { updateUserProfile, fetchVoiceAudio } from '../services/api';
 
 const GUIDE_NAME_SUGGESTIONS = ['Izaque', 'Mentor', 'Guia', 'Hermes', 'Sophia', 'Conselheiro'];
 
-export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged }) {
+export default function UserSettingsModal({
+  isOpen,
+  onClose,
+  onGuideNameChanged,
+  user,
+  profile,
+  onProfileUpdated,
+}) {
   const [guideName, setGuideName] = useState(() => {
     return localStorage.getItem('izaque_guide_name') || 'Izaque';
   });
@@ -45,7 +55,16 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
     return localStorage.getItem('izaque_immersive_voice') === 'true';
   });
 
-  // Configurações de Voz Humanizada
+  // Tecnologia de Voz (Gemini Nativo ou Navegador Local)
+  const [voiceEngine, setVoiceEngine] = useState(() => {
+    return localStorage.getItem('izaque_voice_engine') || 'gemini';
+  });
+
+  const [geminiVoice, setGeminiVoice] = useState(() => {
+    return localStorage.getItem('izaque_gemini_voice') || 'Charon';
+  });
+
+  // Configurações de Voz do Navegador (Legado/Local)
   const [availableVoices, setAvailableVoices] = useState([]);
   const [voiceGender, setVoiceGender] = useState(() => {
     return localStorage.getItem('izaque_voice_gender') || 'auto';
@@ -59,12 +78,11 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
   const [voicePitch, setVoicePitch] = useState(() => {
     return parseFloat(localStorage.getItem('izaque_voice_pitch') || '0.95');
   });
-  const [preferBrowserVoice, setPreferBrowserVoice] = useState(() => {
-    return localStorage.getItem('izaque_voice_prefer_browser') !== 'false';
-  });
-  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
 
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const audioPreviewRef = useRef(null);
 
   // Carrega vozes do navegador
   useEffect(() => {
@@ -74,29 +92,60 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
     return () => {
       unsub();
       humanVoiceService.stop();
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
     };
   }, []);
 
+  // Quando o modal abre, hidrata as preferências (do perfil ou do localStorage)
   useEffect(() => {
     if (isOpen) {
-      setGuideName(localStorage.getItem('izaque_guide_name') || 'Izaque');
-      setAmbientTrack(localStorage.getItem('izaque_ambient_track') || '432hz');
-      setAmbientVolume(parseFloat(localStorage.getItem('izaque_ambient_volume') || '0.20'));
-      setIsAmbientEnabled(localStorage.getItem('izaque_ambient_enabled') === 'true');
-      setImmersiveVoice(localStorage.getItem('izaque_immersive_voice') === 'true');
+      const prefs = profile?.preferences || {};
 
-      setVoiceGender(localStorage.getItem('izaque_voice_gender') || 'auto');
-      setVoiceURI(localStorage.getItem('izaque_voice_uri') || '');
-      setVoiceRate(parseFloat(localStorage.getItem('izaque_voice_rate') || '0.90'));
-      setVoicePitch(parseFloat(localStorage.getItem('izaque_voice_pitch') || '0.95'));
-      setPreferBrowserVoice(localStorage.getItem('izaque_voice_prefer_browser') !== 'false');
+      setGuideName(prefs.guide_name || localStorage.getItem('izaque_guide_name') || 'Izaque');
+      setAmbientTrack(prefs.ambient_track || localStorage.getItem('izaque_ambient_track') || '432hz');
+      setAmbientVolume(
+        prefs.ambient_volume !== undefined
+          ? prefs.ambient_volume
+          : parseFloat(localStorage.getItem('izaque_ambient_volume') || '0.20')
+      );
+      setIsAmbientEnabled(
+        prefs.ambient_enabled !== undefined
+          ? Boolean(prefs.ambient_enabled)
+          : localStorage.getItem('izaque_ambient_enabled') === 'true'
+      );
+      setImmersiveVoice(
+        prefs.immersive_voice !== undefined
+          ? Boolean(prefs.immersive_voice)
+          : localStorage.getItem('izaque_immersive_voice') === 'true'
+      );
+
+      setVoiceEngine(prefs.voice_engine || localStorage.getItem('izaque_voice_engine') || 'gemini');
+      setGeminiVoice(prefs.gemini_voice || localStorage.getItem('izaque_gemini_voice') || 'Charon');
+
+      setVoiceGender(prefs.voice_gender || localStorage.getItem('izaque_voice_gender') || 'auto');
+      setVoiceURI(prefs.voice_uri || localStorage.getItem('izaque_voice_uri') || '');
+      setVoiceRate(
+        prefs.voice_rate !== undefined
+          ? prefs.voice_rate
+          : parseFloat(localStorage.getItem('izaque_voice_rate') || '0.90')
+      );
+      setVoicePitch(
+        prefs.voice_pitch !== undefined
+          ? prefs.voice_pitch
+          : parseFloat(localStorage.getItem('izaque_voice_pitch') || '0.95')
+      );
 
       setAvailableVoices(humanVoiceService.getAvailableVoices());
     } else {
       humanVoiceService.stop();
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
       setIsPlayingPreview(false);
     }
-  }, [isOpen]);
+  }, [isOpen, profile]);
 
   const handleToggleAmbient = (enabled) => {
     setIsAmbientEnabled(enabled);
@@ -131,16 +180,55 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
     localStorage.setItem('izaque_immersive_voice', val ? 'true' : 'false');
   };
 
-  // Testar demonstração da voz
-  const handleTogglePreview = () => {
+  // Testar demonstração da voz (Gemini ou Navegador)
+  const handleTogglePreview = async () => {
     if (isPlayingPreview) {
       humanVoiceService.stop();
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
       setIsPlayingPreview(false);
       return;
     }
 
     const previewSentence = `Olá! Sou a voz do seu mentor ${guideName}. Estou aqui para acolher suas reflexões com serenidade e clareza. Como você se sente hoje?`;
 
+    // 1. Se motor for Gemini Nativo
+    if (voiceEngine === 'gemini') {
+      try {
+        setIsPlayingPreview(true);
+        if (!audioPreviewRef.current) {
+          audioPreviewRef.current = new Audio();
+        }
+        const audio = audioPreviewRef.current;
+        audio.pause();
+
+        const res = await fetchVoiceAudio({
+          text: previewSentence,
+          voiceName: geminiVoice,
+        });
+
+        if (res?.audioUrl) {
+          audio.src = res.audioUrl;
+          audio.onended = () => setIsPlayingPreview(false);
+          audio.onerror = () => setIsPlayingPreview(false);
+          await audio.play();
+        } else {
+          // Fallback navegador se offline
+          humanVoiceService.speak(previewSentence, {
+            onStart: () => setIsPlayingPreview(true),
+            onEnd: () => setIsPlayingPreview(false),
+            onError: () => setIsPlayingPreview(false),
+          });
+        }
+      } catch (err) {
+        console.warn('⚠️ Erro no teste de voz Gemini:', err);
+        setIsPlayingPreview(false);
+      }
+      return;
+    }
+
+    // 2. Se motor for Navegador Local
     humanVoiceService.speak(previewSentence, {
       customSettings: {
         voiceURI,
@@ -154,23 +242,74 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
     });
   };
 
-  const handleSaveAll = () => {
+  const handleSaveAll = async () => {
+    setIsSaving(true);
     const finalGuideName = guideName.trim() || 'Izaque';
+
+    // Monta o objeto universal de preferências
+    const newPreferences = {
+      guide_name: finalGuideName,
+      ambient_track: ambientTrack,
+      ambient_volume: ambientVolume,
+      ambient_enabled: isAmbientEnabled,
+      immersive_voice: immersiveVoice,
+      voice_engine: voiceEngine,
+      gemini_voice: geminiVoice,
+      voice_gender: voiceGender,
+      voice_rate: voiceRate,
+      voice_pitch: voicePitch,
+      voice_uri: voiceURI,
+      prefer_browser: voiceEngine === 'browser',
+    };
+
+    // 1. Persiste no localStorage do dispositivo atual para acesso instantâneo
     localStorage.setItem('izaque_guide_name', finalGuideName);
+    localStorage.setItem('izaque_ambient_track', ambientTrack);
+    localStorage.setItem('izaque_ambient_volume', ambientVolume.toString());
+    localStorage.setItem('izaque_ambient_enabled', isAmbientEnabled ? 'true' : 'false');
+    localStorage.setItem('izaque_immersive_voice', immersiveVoice ? 'true' : 'false');
+    localStorage.setItem('izaque_voice_engine', voiceEngine);
+    localStorage.setItem('izaque_gemini_voice', geminiVoice);
+    localStorage.setItem('izaque_voice_gender', voiceGender);
+    localStorage.setItem('izaque_voice_rate', voiceRate.toString());
+    localStorage.setItem('izaque_voice_pitch', voicePitch.toString());
+    localStorage.setItem('izaque_voice_uri', voiceURI);
+    localStorage.setItem('izaque_voice_prefer_browser', voiceEngine === 'browser' ? 'true' : 'false');
+
     if (onGuideNameChanged) onGuideNameChanged(finalGuideName);
 
-    // Salva preferências de voz
     humanVoiceService.saveSettings({
+      voiceEngine,
+      geminiVoice,
       voiceURI,
       gender: voiceGender,
       rate: voiceRate,
       pitch: voicePitch,
-      preferBrowser: preferBrowserVoice,
+      preferBrowser: voiceEngine === 'browser',
     });
 
     humanVoiceService.stop();
+    if (audioPreviewRef.current) {
+      audioPreviewRef.current.pause();
+    }
     setIsPlayingPreview(false);
 
+    // 2. Sincroniza com a nuvem no Supabase para que o celular e o PC fiquem idênticos
+    if (user?.id) {
+      try {
+        await updateUserProfile(user.id, { preferences: newPreferences });
+        if (onProfileUpdated) {
+          onProfileUpdated({
+            ...(profile || {}),
+            preferences: newPreferences,
+          });
+        }
+      } catch (cloudErr) {
+        console.warn('⚠️ Aviso ao sincronizar preferências no Supabase:', cloudErr.message);
+      }
+    }
+
+    setIsSaving(false);
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -199,66 +338,85 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
               <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-serif font-medium text-stone-900 dark:text-stone-50">
-                Preferências da Mentoria
-              </h3>
-              <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400">
-                Personalize sua imersão, sons e a voz do seu mentor
+              <h2 className="text-base sm:text-lg font-serif font-medium tracking-tight">
+                Preferências do Santuário
+              </h2>
+              <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
+                <Globe className="w-3 h-3 text-teal-600 dark:text-teal-400 inline" />
+                Sincronizado automaticamente entre PC e Celular
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={() => {
               humanVoiceService.stop();
+              if (audioPreviewRef.current) audioPreviewRef.current.pause();
               onClose();
             }}
-            className="p-2 rounded-xl text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-slate-800 transition min-w-[38px] min-h-[38px] flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-stone-200/60 dark:bg-slate-800 hover:bg-stone-300/80 dark:hover:bg-slate-700 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition flex items-center justify-center"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="py-6 space-y-7">
-          {/* 1. NOME DO SEU GUIA / MENTOR */}
+        {/* CONTEÚDO */}
+        <div className="py-4 sm:py-6 space-y-6">
+          {/* 1. NOME PERSONALIZADO DO MENTOR */}
           <div className="space-y-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400">
-              1. Nome do Seu Mentor
-            </label>
-            <input
-              type="text"
-              value={guideName}
-              onChange={(e) => setGuideName(e.target.value)}
-              placeholder="Ex: Izaque, Mentor, Conselheiro..."
-              className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 focus:border-teal-700 text-base sm:text-sm text-stone-800 dark:text-stone-100 outline-none transition"
-            />
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {GUIDE_NAME_SUGGESTIONS.map((n) => (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400 block">
+                1. Nome do seu Mentor
+              </span>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+                Como você gostaria de chamar a inteligência acolhedora que guia suas reflexões
+              </p>
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                value={guideName}
+                onChange={(e) => setGuideName(e.target.value)}
+                maxLength={24}
+                placeholder="Ex: Izaque, Sophia, Hermes..."
+                className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-800/90 border border-stone-300 dark:border-slate-700 text-sm font-medium text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none focus:border-teal-700 dark:focus:border-teal-400 transition"
+              />
+              <span className="absolute right-3.5 top-3.5 text-[11px] font-mono text-stone-400">
+                {guideName.length}/24
+              </span>
+            </div>
+
+            {/* Sugestões Rápidas */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[11px] text-stone-400 mr-1">Sugestões:</span>
+              {GUIDE_NAME_SUGGESTIONS.map((sug) => (
                 <button
-                  key={n}
+                  key={sug}
                   type="button"
-                  onClick={() => setGuideName(n)}
-                  className={`text-xs px-3 py-1 rounded-xl border transition ${
-                    guideName === n
+                  onClick={() => setGuideName(sug)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] border transition ${
+                    guideName.toLowerCase() === sug.toLowerCase()
                       ? 'bg-teal-700 text-white border-teal-700 font-medium'
-                      : 'bg-white/70 dark:bg-slate-800 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-slate-700 hover:border-teal-600'
+                      : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-stone-400'
                   }`}
                 >
-                  {n}
+                  {sug}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 2. TRILHA SONORA RELAXANTE */}
+          {/* 2. SOM AMBIENTE & FREQUÊNCIA DE CURA */}
           <div className="space-y-4 pt-4 border-t border-stone-200/80 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400 block">
-                  2. Trilha Sonora Relaxante
+                  2. Som Ambiente Terapêutico
                 </span>
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                  Música contínua com <em>Audio Ducking</em> (abaixa suavemente quando o mentor fala)
+                  Frequências restauradoras para acalmar a mente durante a conversa
                 </p>
               </div>
 
@@ -281,6 +439,7 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
                 className="space-y-3 pt-2"
               >
                 <div className="grid grid-cols-2 gap-2.5">
@@ -366,15 +525,15 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
             </button>
           </div>
 
-          {/* 4. PERSONALIZAÇÃO DA VOZ DO MENTOR (HUMANIZAÇÃO E TOM) */}
+          {/* 4. MOTOR DE VOZ DO MENTOR: GEMINI NATIVO VS NAVEGADOR */}
           <div className="space-y-4 pt-4 border-t border-stone-200/80 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400 block">
-                  4. Voz do Mentor (Tom e Humanização)
+                  4. Voz do Mentor
                 </span>
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
-                  Ajuste o timbre, ritmo e perfil para uma experiência natural e acolhedora
+                  Vozes neurais com emoção humana e entonação terapêutica
                 </p>
               </div>
 
@@ -402,136 +561,207 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
               </button>
             </div>
 
-            {/* SELEÇÃO DO PERFIL DE VOZ */}
-            <div className="space-y-2 pt-1">
-              <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-300">
-                Perfil da Voz:
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVoiceGender('male');
-                    setVoiceURI('');
-                  }}
-                  className={`p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1 ${
-                    voiceGender === 'male'
-                      ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
-                      : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-teal-600'
-                  }`}
-                >
-                  <span className="text-base">🧔</span>
-                  <span className="text-xs font-semibold">Masculina</span>
-                  <span className="text-[10px] text-stone-400">Serena & Firme</span>
-                </button>
+            {/* SELEÇÃO DO MOTOR DE VOZ */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setVoiceEngine('gemini')}
+                className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 ${
+                  voiceEngine === 'gemini'
+                    ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-teal-600'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-xl bg-teal-700/10 flex items-center justify-center text-teal-800 dark:text-teal-400 shrink-0 mt-0.5">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold flex items-center gap-1.5">
+                    <span>Voz Gemini Nativa</span>
+                    <span className="px-1.5 py-0.2 bg-teal-700 text-white text-[9px] rounded-full font-sans uppercase">
+                      Top
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">
+                    Expressão humana, pausas reais e som idêntico no PC e celular
+                  </div>
+                </div>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVoiceGender('female');
-                    setVoiceURI('');
-                  }}
-                  className={`p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1 ${
-                    voiceGender === 'female'
-                      ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
-                      : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-teal-600'
-                  }`}
-                >
-                  <span className="text-base">👩</span>
-                  <span className="text-xs font-semibold">Feminina</span>
-                  <span className="text-[10px] text-stone-400">Acolhedora & Suave</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVoiceGender('auto');
-                  }}
-                  className={`p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1 ${
-                    voiceGender === 'auto'
-                      ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
-                      : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-teal-600'
-                  }`}
-                >
-                  <span className="text-base">✨</span>
-                  <span className="text-xs font-semibold">Neural / Auto</span>
-                  <span className="text-[10px] text-stone-400">Mais Realista</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setVoiceEngine('browser')}
+                className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 ${
+                  voiceEngine === 'browser'
+                    ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-teal-600'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-xl bg-stone-500/10 flex items-center justify-center text-stone-700 dark:text-stone-300 shrink-0 mt-0.5">
+                  <Cpu className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold">Voz do Navegador</div>
+                  <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">
+                    Sintetizador local do aparelho (Web Speech API)
+                  </div>
+                </div>
+              </button>
             </div>
 
-            {/* SELETOR ESPECÍFICO DE VOZES INSTALADAS NO DISPOSITIVO */}
-            {availableVoices.length > 0 && (
-              <div className="space-y-1 pt-1">
+            {/* SE O MOTOR FOR GEMINI NATIVO: CARDS DE VOZES OFICIAIS */}
+            {voiceEngine === 'gemini' && (
+              <div className="space-y-2 pt-1">
                 <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-300">
-                  Voz Específica do Sistema:
+                  Escolha a Personalidade da Voz do Gemini:
                 </label>
-                <select
-                  value={voiceURI}
-                  onChange={(e) => {
-                    setVoiceURI(e.target.value);
-                    if (e.target.value) {
-                      setVoiceGender('custom');
-                    }
-                  }}
-                  className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-xs text-stone-800 dark:text-stone-100 outline-none focus:border-teal-700"
-                >
-                  <option value="">Automática (Melhor voz detectada pelo perfil)</option>
-                  {availableVoices.map((v) => (
-                    <option key={v.voiceURI} value={v.voiceURI}>
-                      {v.name} {v.isNatural ? '★ (Neural)' : ''} ({v.lang})
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {GEMINI_VOICES.map((v) => {
+                    const isSelected = geminiVoice === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setGeminiVoice(v.id)}
+                        className={`p-3 rounded-2xl border text-left transition flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
+                            : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-700 dark:text-stone-300 hover:border-teal-600'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-lg">
+                            {v.id === 'Charon' ? '🧔' : v.id === 'Aoede' ? '👩' : v.id === 'Kore' ? '🌟' : v.id === 'Puck' ? '⚡' : '🛡️'}
+                          </span>
+                          <div>
+                            <div className="text-xs font-semibold">{v.name}</div>
+                            <div className="text-[10px] text-stone-400">{v.description}</div>
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-4 h-4 text-teal-700 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* CONTROLES DE RITMO E TOM (PITCH & RATE) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              {/* Ritmo / Velocidade */}
-              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700/80 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-stone-700 dark:text-stone-200">Ritmo da Fala</span>
-                  <span className="font-mono text-teal-700 dark:text-teal-400 font-semibold">{voiceRate.toFixed(2)}x</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.75"
-                  max="1.15"
-                  step="0.05"
-                  value={voiceRate}
-                  onChange={(e) => setVoiceRate(parseFloat(e.target.value))}
-                  className="w-full accent-teal-700 cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-stone-400">
-                  <span>Meditativo</span>
-                  <span>Natural</span>
-                  <span>Dinâmico</span>
-                </div>
-              </div>
+            {/* SE O MOTOR FOR NAVEGADOR LOCAL: AJUSTES DE VOZ DO SO */}
+            {voiceEngine === 'browser' && (
+              <div className="space-y-4 pt-1">
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-300">
+                    Gênero da Voz do Sistema:
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVoiceGender('male');
+                        setVoiceURI('');
+                      }}
+                      className={`p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1 ${
+                        voiceGender === 'male'
+                          ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-teal-600'
+                      }`}
+                    >
+                      <span className="text-base">🧔</span>
+                      <span className="text-xs font-semibold">Masculina</span>
+                    </button>
 
-              {/* Tom / Timbre (Pitch) */}
-              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700/80 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-stone-700 dark:text-stone-200">Tom (Timbre)</span>
-                  <span className="font-mono text-teal-700 dark:text-teal-400 font-semibold">{voicePitch.toFixed(2)}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVoiceGender('female');
+                        setVoiceURI('');
+                      }}
+                      className={`p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1 ${
+                        voiceGender === 'female'
+                          ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-teal-600'
+                      }`}
+                    >
+                      <span className="text-base">👩</span>
+                      <span className="text-xs font-semibold">Feminina</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVoiceGender('auto');
+                      }}
+                      className={`p-2.5 rounded-2xl border text-center transition flex flex-col items-center gap-1 ${
+                        voiceGender === 'auto'
+                          ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-700 text-teal-900 dark:text-teal-200 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-teal-600'
+                      }`}
+                    >
+                      <span className="text-base">✨</span>
+                      <span className="text-xs font-semibold">Automática</span>
+                    </button>
+                  </div>
                 </div>
-                <input
-                  type="range"
-                  min="0.80"
-                  max="1.20"
-                  step="0.04"
-                  value={voicePitch}
-                  onChange={(e) => setVoicePitch(parseFloat(e.target.value))}
-                  className="w-full accent-teal-700 cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-stone-400">
-                  <span>Grave / Aveludado</span>
-                  <span>Equilibrado</span>
-                  <span>Leve</span>
+
+                {availableVoices.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-300">
+                      Voz Específica do Sistema:
+                    </label>
+                    <select
+                      value={voiceURI}
+                      onChange={(e) => {
+                        setVoiceURI(e.target.value);
+                        if (e.target.value) setVoiceGender('custom');
+                      }}
+                      className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-xs text-stone-800 dark:text-stone-100 outline-none focus:border-teal-700"
+                    >
+                      <option value="">Automática (Melhor voz detectada)</option>
+                      {availableVoices.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI}>
+                          {v.name} {v.isNatural ? '★ (Neural)' : ''} ({v.lang})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Ritmo e Tom */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-stone-700 dark:text-stone-200">Ritmo da Fala</span>
+                      <span className="font-mono text-teal-700 dark:text-teal-400 font-semibold">{voiceRate.toFixed(2)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.75"
+                      max="1.15"
+                      step="0.05"
+                      value={voiceRate}
+                      onChange={(e) => setVoiceRate(parseFloat(e.target.value))}
+                      className="w-full accent-teal-700 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-stone-700 dark:text-stone-200">Tom (Timbre)</span>
+                      <span className="font-mono text-teal-700 dark:text-teal-400 font-semibold">{voicePitch.toFixed(2)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.80"
+                      max="1.20"
+                      step="0.04"
+                      value={voicePitch}
+                      onChange={(e) => setVoicePitch(parseFloat(e.target.value))}
+                      className="w-full accent-teal-700 cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -540,13 +770,16 @@ export default function UserSettingsModal({ isOpen, onClose, onGuideNameChanged 
           <button
             type="button"
             onClick={handleSaveAll}
-            className="w-full sm:w-auto px-7 py-3 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-medium tracking-wide shadow-md transition flex items-center justify-center gap-2"
+            disabled={isSaving}
+            className="w-full sm:w-auto px-7 py-3 rounded-2xl bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white text-xs font-medium tracking-wide shadow-md transition flex items-center justify-center gap-2"
           >
             {savedSuccess ? (
               <>
                 <Check className="w-4 h-4" />
-                <span>Preferências Salvas!</span>
+                <span>Preferências Salvas e Sincronizadas!</span>
               </>
+            ) : isSaving ? (
+              <span>Sincronizando...</span>
             ) : (
               <span>Salvar Preferências</span>
             )}

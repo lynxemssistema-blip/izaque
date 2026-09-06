@@ -52,17 +52,18 @@ export function cleanTextForSpeech(text) {
 /**
  * Calcula o hash SHA-256 do texto para verificação de cache no Supabase Storage
  */
-export async function getCleanTextAndHash(text) {
+export async function getCleanTextAndHash(text, voiceName = 'Charon') {
   const clean = cleanTextForSpeech(text);
   if (!clean) return { cleanText: '', fileName: '' };
   try {
+    const normalizedVoice = (voiceName || 'Charon').toLowerCase().replace(/[^a-z0-9]/g, '');
     if (typeof window !== 'undefined' && window.crypto?.subtle) {
       const encoder = new TextEncoder();
-      const data = encoder.encode(clean);
+      const data = encoder.encode(`${normalizedVoice}_${clean}`);
       const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-      const fileName = `voice_${hashHex.slice(0, 24)}.mp3`;
+      const fileName = `voice_${normalizedVoice}_${hashHex.slice(0, 24)}.wav`;
       return { cleanText: clean, fileName };
     }
     return { cleanText: clean, fileName: '' };
@@ -221,23 +222,23 @@ export async function sendAudioChatMessage({ audioBase64, mimeType = 'audio/webm
  * busca diretamente no cache do Supabase Storage ou ativa a Web Speech API nativa.
  * @param {object} params
  * @param {string} params.text Texto da reflexão
- * @param {string} [params.messageId] Identificador da mensagem
- * @returns {Promise<{audioUrl: string|null, fromCache: boolean, cleanedText: string, useSpeechSynthesis: boolean}>}
+ * @param {string} [params.voiceName] Nome da voz (Charon, Aoede, Kore, etc.)
+ * @returns {Promise<{audioUrl: string|null, fromCache: boolean, cleanedText: string, useSpeechSynthesis: boolean, voiceName?: string}>}
  */
-export async function fetchVoiceAudio({ text, messageId }) {
-  const { cleanText, fileName } = await getCleanTextAndHash(text);
+export async function fetchVoiceAudio({ text, messageId, voiceName = 'Charon' }) {
+  const { cleanText, fileName } = await getCleanTextAndHash(text, voiceName);
   if (!cleanText) {
     throw new Error('Texto não possui caracteres válidos para leitura.');
   }
 
-  // 1. Tenta sintetizar via Backend Hermes (ElevenLabs -> OpenAI -> Google TTS)
+  // 1. Tenta sintetizar via Backend Hermes (Gemini TTS -> ElevenLabs -> OpenAI -> Google TTS)
   try {
     const response = await fetch(`${BACKEND_URL}/api/voice`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text, messageId }),
+      body: JSON.stringify({ text, messageId, voiceName }),
     });
 
     if (response.ok) {
@@ -250,6 +251,7 @@ export async function fetchVoiceAudio({ text, messageId }) {
             fromCache: Boolean(data.fromCache),
             cleanedText: cleanText,
             useSpeechSynthesis: false,
+            voiceName: data.voiceName || voiceName,
           };
         }
       }

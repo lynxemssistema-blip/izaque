@@ -298,12 +298,17 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     setActiveUserAudioId(null);
     humanVoiceService.stop();
 
-    // Preferência de voz: se ativada (padrão), utiliza as vozes neurais e o tom customizado pelo usuário
-    const preferBrowser = localStorage.getItem('izaque_voice_prefer_browser') !== 'false';
+    // 1. Verifica a preferência de tecnologia de voz (Gemini Nativo vs Navegador Local)
+    const voiceEngine = localStorage.getItem('izaque_voice_engine') || 'gemini';
+    const preferBrowser = voiceEngine === 'browser' || localStorage.getItem('izaque_voice_prefer_browser') === 'true';
+
     if (preferBrowser) {
       playNativeSpeech(text, messageId);
       return;
     }
+
+    // 2. Modo Nativo Gemini: Voz Neural de Alta Fidelidade (Charon / Aoede / Kore)
+    const geminiVoice = localStorage.getItem('izaque_gemini_voice') || 'Charon';
 
     if (!audioElementRef.current) {
       audioElementRef.current = new Audio();
@@ -314,7 +319,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
 
     try {
       setLoadingVoiceId(messageId);
-      const voiceRes = await fetchVoiceAudio({ text, messageId });
+      const voiceRes = await fetchVoiceAudio({ text, messageId, voiceName: geminiVoice });
 
       if (voiceRes?.audioUrl && !voiceRes.useSpeechSynthesis) {
         audio.src = voiceRes.audioUrl;
@@ -332,7 +337,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         };
 
         audio.onerror = () => {
-          console.warn('⚠️ Erro ao reproduzir arquivo de áudio, ativando síntese humanizada...');
+          console.warn('⚠️ Erro ao reproduzir áudio Gemini, acionando sintetizador local...');
           playNativeSpeech(voiceRes.cleanedText || text, messageId);
         };
 
@@ -345,7 +350,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
 
       playNativeSpeech(voiceRes?.cleanedText || text, messageId);
     } catch (err) {
-      console.warn('⚠️ Tentando fallback de voz humanizada devido a:', err?.message);
+      console.warn('⚠️ Tentando fallback de voz local devido a:', err?.message);
       playNativeSpeech(text, messageId);
     }
   };

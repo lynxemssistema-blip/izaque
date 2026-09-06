@@ -6,6 +6,14 @@
 
 import { cleanTextForSpeech } from './api';
 
+export const GEMINI_VOICES = [
+  { id: 'Charon', name: 'Charon (Mentor Izaque)', gender: 'male', description: 'Voz masculina profunda, reflexiva e madura' },
+  { id: 'Aoede', name: 'Aoede (Mentora Acolhedora)', gender: 'female', description: 'Voz feminina suave, serena e confortante' },
+  { id: 'Kore', name: 'Kore (Encorajadora)', gender: 'female', description: 'Voz feminina firme, clara e segura' },
+  { id: 'Puck', name: 'Puck (Dinâmica)', gender: 'neutral', description: 'Voz expressiva, leve e conversacional' },
+  { id: 'Fenrir', name: 'Fenrir (Firme)', gender: 'male', description: 'Voz masculina enérgica e determinada' },
+];
+
 class HumanVoiceService {
   constructor() {
     this.currentUtterance = null;
@@ -107,29 +115,35 @@ class HumanVoiceService {
   getSettings() {
     if (typeof window === 'undefined') {
       return {
+        voiceEngine: 'gemini',
+        geminiVoice: 'Charon',
         voiceURI: '',
         gender: 'auto',
         rate: 0.90,
         pitch: 0.95,
-        preferBrowser: true,
+        preferBrowser: false,
       };
     }
 
     return {
+      voiceEngine: localStorage.getItem('izaque_voice_engine') || 'gemini', // 'gemini' | 'browser'
+      geminiVoice: localStorage.getItem('izaque_gemini_voice') || 'Charon',
       voiceURI: localStorage.getItem('izaque_voice_uri') || '',
       gender: localStorage.getItem('izaque_voice_gender') || 'auto', // 'auto' | 'male' | 'female' | 'custom'
       rate: parseFloat(localStorage.getItem('izaque_voice_rate') || '0.90'),
       pitch: parseFloat(localStorage.getItem('izaque_voice_pitch') || '0.95'),
-      preferBrowser: localStorage.getItem('izaque_voice_prefer_browser') !== 'false',
+      preferBrowser: localStorage.getItem('izaque_voice_prefer_browser') === 'true',
     };
   }
 
   /**
    * Salva as preferências de voz
    */
-  saveSettings({ voiceURI, gender, rate, pitch, preferBrowser }) {
+  saveSettings({ voiceEngine, geminiVoice, voiceURI, gender, rate, pitch, preferBrowser }) {
     if (typeof window === 'undefined') return;
 
+    if (voiceEngine !== undefined) localStorage.setItem('izaque_voice_engine', voiceEngine);
+    if (geminiVoice !== undefined) localStorage.setItem('izaque_gemini_voice', geminiVoice);
     if (voiceURI !== undefined) localStorage.setItem('izaque_voice_uri', voiceURI);
     if (gender !== undefined) localStorage.setItem('izaque_voice_gender', gender);
     if (rate !== undefined) localStorage.setItem('izaque_voice_rate', rate.toString());
