@@ -178,28 +178,42 @@ async function processChatMessageCore({ message, userId, agentId, history = [] }
 
   const selectedAgent = await resolveAgent(agentId, message, allActiveAgents || [], history);
 
-  // 1. Gera Embedding da mensagem (768d)
-  const userEmbedding = await generateEmbedding(message);
+  // 1. Gera Embedding da mensagem (768d) com tolerância a falhas
+  let userEmbedding = null;
+  try {
+    userEmbedding = await generateEmbedding(message);
+  } catch (e) {
+    console.warn('⚠️ Falha ao gerar embedding:', e.message);
+  }
 
-  // 2. Busca memórias semânticas no Supabase pgvector (Histórico do Usuário)
-  const relevantMemories = await searchMemories(userId, userEmbedding, {
-    matchThreshold: 0.40,
-    matchCount: 4,
-  });
+  // 2. Busca memórias semânticas no Supabase pgvector (se embedding disponível)
+  let relevantMemories = [];
+  if (userEmbedding) {
+    try {
+      relevantMemories = await searchMemories(userId, userEmbedding, {
+        matchThreshold: 0.40,
+        matchCount: 4,
+      });
+    } catch (mErr) {
+      console.warn('⚠️ Falha ao buscar memórias do usuário:', mErr.message);
+    }
+  }
   const memoriesText = formatMemoriesForPrompt(relevantMemories);
 
-  // 3. Busca estudos e materiais técnicos do Agente (Base de Conhecimento RAG de Domínio)
+  // 3. Busca estudos e materiais técnicos do Agente (se embedding disponível)
   let knowledgeText = '';
   let relevantKnowledge = [];
-  try {
-    const { searchAgentKnowledge, formatAgentKnowledgeForPrompt } = await import('../services/agentKnowledgeService.js');
-    relevantKnowledge = await searchAgentKnowledge(selectedAgent.id, userEmbedding, {
-      matchThreshold: 0.38,
-      matchCount: 3,
-    });
-    knowledgeText = formatAgentKnowledgeForPrompt(relevantKnowledge);
-  } catch (kErr) {
-    console.warn('⚠️ Falha ao buscar conhecimento de estudo do agente:', kErr.message);
+  if (userEmbedding) {
+    try {
+      const { searchAgentKnowledge, formatAgentKnowledgeForPrompt } = await import('../services/agentKnowledgeService.js');
+      relevantKnowledge = await searchAgentKnowledge(selectedAgent.id, userEmbedding, {
+        matchThreshold: 0.38,
+        matchCount: 3,
+      });
+      knowledgeText = formatAgentKnowledgeForPrompt(relevantKnowledge);
+    } catch (kErr) {
+      console.warn('⚠️ Falha ao buscar conhecimento de estudo do agente:', kErr.message);
+    }
   }
 
   // 4. Monta o Super-Prompt com Persona + Conhecimento Técnico + Memórias Pessoais

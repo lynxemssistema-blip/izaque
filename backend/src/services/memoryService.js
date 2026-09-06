@@ -7,17 +7,26 @@ import { supabaseAdmin } from '../config/supabase.js';
  * @returns {Promise<number[]>} Vetor numérico de 768 dimensões
  */
 export async function generateEmbedding(text) {
-  try {
-    const embeddingModel = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
-    const result = await embeddingModel.embedContent({
-      content: { parts: [{ text }] },
-      outputDimensionality: 768,
-    });
-    return result.embedding.values;
-  } catch (error) {
-    console.error('❌ Erro ao gerar embedding no Gemini:', error.message);
-    throw new Error(`Falha na geração de embedding: ${error.message}`);
+  const modelsToTry = [EMBEDDING_MODEL, 'gemini-embedding-001'].filter((m, i, arr) => arr.indexOf(m) === i);
+  let lastError = null;
+
+  for (const modelCandidate of modelsToTry) {
+    try {
+      const embeddingModel = genAI.getGenerativeModel({ model: modelCandidate });
+      const result = await embeddingModel.embedContent({
+        content: { parts: [{ text }] },
+        outputDimensionality: 768,
+      });
+      return result.embedding.values;
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️ [Embedding] Modelo ${modelCandidate} falhou:`, error.message);
+      continue;
+    }
   }
+
+  console.error('❌ Não foi possível gerar embedding com nenhum modelo disponível:', lastError?.message);
+  return null;
 }
 
 /**

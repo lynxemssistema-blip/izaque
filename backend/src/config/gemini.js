@@ -35,5 +35,14 @@ if (!rawChatModel || rawChatModel.includes('2.0-flash') || rawChatModel.includes
 }
 
 export const CHAT_MODEL = rawChatModel;
-export const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004';
+
+// Proteção de Embedding para Produção:
+// text-embedding-004 e embedding-001 retornam 404 com a chave na API v1beta do Gemini.
+// gemini-embedding-001 é o modelo oficial compatível e suporta outputDimensionality: 768.
+let rawEmbeddingModel = (process.env.GEMINI_EMBEDDING_MODEL || '').trim();
+if (!rawEmbeddingModel || rawEmbeddingModel.includes('text-embedding-004') || rawEmbeddingModel === 'embedding-001') {
+  rawEmbeddingModel = 'gemini-embedding-001';
+}
+
+export const EMBEDDING_MODEL = rawEmbeddingModel;
 export const FALLBACK_CHAT_MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
