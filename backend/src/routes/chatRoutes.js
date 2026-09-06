@@ -18,6 +18,8 @@ router.put('/profile/:userId', updateProfile);
 // Listar agentes ativos para o seletor do chat
 router.get('/agents', getActiveAgents);
 
+import { handleForgotPassword, handleTestEmail } from '../controllers/authController.js';
+
 // Histórico de Conversas Persistente (Recupera após F5 / Reload)
 router.get('/chat/history/:userId', getChatHistory);
 router.delete('/chat/history/:userId', clearChatHistory);
@@ -30,5 +32,9 @@ router.post('/chat/audio', handleAudioChatMessage);
 
 // Endpoint de Voz Humanizada (Text-To-Speech com Cache no Supabase Storage)
 router.post('/voice', handleGenerateVoice);
+
+// Rotas de Autenticação e Suporte Oficial (Hostinger SMTP)
+router.post('/auth/forgot-password', handleForgotPassword);
+router.post('/auth/test-email', handleTestEmail);
 
 export default router;

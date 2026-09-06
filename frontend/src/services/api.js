@@ -426,3 +426,28 @@ export async function uploadUserAvatar(userId, file) {
   }
 }
 
+/**
+ * Solicita o envio do e-mail de recuperação de senha via suporte@lynxems.com.br
+ * @param {string} email
+ * @returns {Promise<{message: string, sentTo?: string}>}
+ */
+export async function requestPasswordReset(email) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || 'Erro ao processar recuperação de senha.');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('❌ Erro ao solicitar recuperação de senha:', error);
+    throw error;
+  }
+}
+

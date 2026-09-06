@@ -9,12 +9,14 @@ import WelcomeOnboarding from './components/WelcomeOnboarding';
 import UserProfileModal from './components/UserProfileModal';
 import MobileBottomNav from './components/MobileBottomNav';
 import UserSettingsModal from './components/UserSettingsModal';
+import ResetPasswordModal from './components/ResetPasswordModal';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('landing'); // 'landing' | 'chat' | 'admin'
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -86,6 +88,15 @@ export default function App() {
   }, [activeTab]);
 
   useEffect(() => {
+    // Detecta se a URL contém instrução de recuperação de senha
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash || '';
+      if (searchParams.get('mode') === 'reset-password' || hash.includes('type=recovery')) {
+        setIsResetPasswordOpen(true);
+      }
+    }
+
     // 1. Obter sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
@@ -107,7 +118,11 @@ export default function App() {
     // 2. Escutar mudanças de autenticação
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResetPasswordOpen(true);
+      }
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
@@ -259,6 +274,12 @@ export default function App() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         onSuccess={handleAuthSuccess}
+      />
+
+      {/* MODAL DE REDEFINIÇÃO DE SENHA (RECUPERAÇÃO VIA E-MAIL OFICIAL) */}
+      <ResetPasswordModal
+        isOpen={isResetPasswordOpen}
+        onClose={() => setIsResetPasswordOpen(false)}
       />
 
       {/* MODAL DE PERFIL DO USUÁRIO (FOTO, NOME, WHATSAPP) */}
