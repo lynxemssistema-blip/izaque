@@ -22,6 +22,7 @@ export default function App() {
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [resetTokenHash, setResetTokenHash] = useState('');
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
+  const [selectedInitialPlan, setSelectedInitialPlan] = useState('pro_monthly');
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -249,7 +250,15 @@ export default function App() {
           onLogout={handleLogout}
           onOpenOnboarding={() => setShowOnboarding(true)}
           onOpenProfile={() => setIsProfileOpen(true)}
-          onOpenSubscription={() => setIsSubscriptionOpen(true)}
+          onOpenSubscription={(planId) => {
+            if (typeof planId === 'string') setSelectedInitialPlan(planId);
+            else setSelectedInitialPlan('pro_monthly');
+            if (!user) {
+              setIsAuthOpen(true);
+            } else {
+              setIsSubscriptionOpen(true);
+            }
+          }}
           onOpenFeedback={() => setIsFeedbackOpen(true)}
         />
       </div>
@@ -257,7 +266,18 @@ export default function App() {
       {/* ROTEAMENTO PRINCIPAL */}
       <main className={`flex-1 flex flex-col ${activeTab === 'chat' ? 'min-h-0 overflow-hidden' : ''}`}>
         {activeTab === 'landing' && (
-          <LandingPage onStartChat={handleStartChat} user={user} />
+          <LandingPage
+            onStartChat={handleStartChat}
+            user={user}
+            onOpenSubscription={(planId) => {
+              setSelectedInitialPlan(planId || 'pro_monthly');
+              if (!user) {
+                setIsAuthOpen(true);
+              } else {
+                setIsSubscriptionOpen(true);
+              }
+            }}
+          />
         )}
 
         {activeTab === 'chat' && (
@@ -385,6 +405,7 @@ export default function App() {
         onClose={() => setIsSubscriptionOpen(false)}
         user={user}
         profile={profile}
+        initialPlanId={selectedInitialPlan}
         onPlanUpdated={() => {
           if (user) loadUserProfile(user);
         }}

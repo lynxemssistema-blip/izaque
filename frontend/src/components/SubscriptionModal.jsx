@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { fetchPublicPlans, createPixOrder } from '../services/api';
 
-export default function SubscriptionModal({ isOpen, onClose, user, profile, onPlanUpdated }) {
+export default function SubscriptionModal({ isOpen, onClose, user, profile, onPlanUpdated, initialPlanId }) {
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null); // Plano para checkout PIX
@@ -30,10 +30,11 @@ export default function SubscriptionModal({ isOpen, onClose, user, profile, onPl
       fetchPublicPlans()
         .then((data) => {
           setPlans(data);
-          if (data.length > 0 && !selectedPlan) {
-            // Seleciona o mensal por padrão
-            const monthly = data.find((p) => p.id === 'pro_monthly') || data[0];
-            setSelectedPlan(monthly);
+          if (data.length > 0) {
+            const target = initialPlanId
+              ? data.find((p) => p.id === initialPlanId) || data[0]
+              : data.find((p) => p.id === 'pro_monthly') || data[0];
+            setSelectedPlan(target);
           }
         })
         .catch((err) => {
@@ -44,7 +45,7 @@ export default function SubscriptionModal({ isOpen, onClose, user, profile, onPl
       setOrderSuccess(false);
       setErrorMessage('');
     }
-  }, [isOpen]);
+  }, [isOpen, initialPlanId]);
 
   if (!isOpen) return null;
 
