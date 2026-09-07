@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import { genAI, CHAT_MODEL, FALLBACK_CHAT_MODELS } from '../config/gemini.js';
+import { sendSubscriptionApprovedNotification } from '../services/emailService.js';
 
 /**
  * Controller Administrativo (Exclusivo para Super Admin / Master)
@@ -321,3 +322,254 @@ export async function getAgentDocumentChunks(req, res) {
     res.status(500).json({ error: 'Erro ao carregar trechos do documento.' });
   }
 }
+
+// ==========================================
+// GESTÃO DE PLANOS, PREÇOS E DADOS PIX (SUPERADMIN)
+// ==========================================
+
+// 13. Listar todos os planos cadastrados para edição
+export async function getAdminPlans(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_plans')
+      .select('*')
+      .order('price', { ascending: true });
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar planos admin:', error);
+    res.status(500).json({ error: 'Erro ao carregar planos para administração.' });
+  }
+}
+
+// 14. Atualizar valores, chave PIX e dados de um plano específico
+export async function updateAdminPlan(req, res) {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      price,
+      billing_cycle,
+      description,
+      features,
+      pix_key,
+      pix_key_type,
+      pix_beneficiary,
+      activation_notice,
+      is_active,
+    } = req.body;
+
+    const updates = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (name !== undefined) updates.name = name.trim();
+    if (price !== undefined) updates.price = Number(price);
+    if (billing_cycle !== undefined) updates.billing_cycle = billing_cycle;
+    if (description !== undefined) updates.description = description;
+    if (features !== undefined) updates.features = Array.isArray(features) ? features : [];
+    if (pix_key !== undefined) updates.pix_key = pix_key.trim();
+    if (pix_key_type !== undefined) updates.pix_key_type = pix_key_type.trim();
+    if (pix_beneficiary !== undefined) updates.pix_beneficiary = pix_beneficiary.trim();
+    if (activation_notice !== undefined) updates.activation_notice = activation_notice.trim();
+    if (is_active !== undefined) updates.is_active = Boolean(is_active);
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_plans')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log(`✅ [Plan Updated] Plano ${id} atualizado pelo Superadmin. Preço: R$ ${data.price}, Chave PIX: ${data.pix_key}`);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar plano:', error);
+    res.status(500).json({ error: 'Falha ao salvar alterações do plano.', details: error.message });
+  }
+}
+
+// ==========================================
+// GESTÃO DE ACESSO E PLANOS DE CLIENTES (SUPERADMIN)
+// ==========================================
+
+// 15. Ativar ou Bloquear/Desativar o acesso geral de um cliente
+export async function updateUserStatus(req, res) {
+  try {
+    const { userId, isActive } = req.body;
+
+    if (!userId || isActive === undefined) {
+      return res.status(400).json({ error: 'ID de usuário e status isActive obrigatórios.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_profiles')
+      .update({
+        is_active: Boolean(isActive),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log(`👤 [User Access] Usuário ${userId} status de acesso alterado para: ${isActive ? 'ATIVO' : 'BLOQUEADO'}`);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao alterar status de acesso do usuário:', error);
+    res.status(500).json({ error: 'Erro ao alterar status de acesso do usuário.' });
+  }
+}
+
+// 16. Ativar ou alterar o plano de um usuário manualmente
+export async function updateUserPlan(req, res) {
+  try {
+    const { userId, planId, planStatus, planExpiresAt } = req.body;
+
+    if (!userId || !planId) {
+      return res.status(400).json({ error: 'ID do usuário e plano são obrigatórios.' });
+    }
+
+    const updates = {
+      plan_id: planId,
+      plan_status: planStatus || 'active',
+      updated_at: new Date().toISOString(),
+    };
+
+    if (planId !== 'free') {
+      updates.plan_activated_at = new Date().toISOString();
+      if (planExpiresAt) {
+        updates.plan_expires_at = planExpiresAt;
+      }
+    } else {
+      updates.plan_expires_at = null;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log(`💎 [User Plan Updated] Usuário ${userId} teve o plano alterado para: ${planId}`);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar plano do usuário:', error);
+    res.status(500).json({ error: 'Erro ao atualizar plano do usuário.' });
+  }
+}
+
+// 17. Listar todos os pedidos e assinaturas PIX
+export async function getAdminSubscriptions(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_subscriptions')
+      .select(`
+        *,
+        plan:izaque_plans(name, billing_cycle)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao buscar assinaturas admin:', error);
+    res.status(500).json({ error: 'Erro ao carregar pedidos de assinatura.' });
+  }
+}
+
+// 18. Aprovar pedido PIX e ativar plano do cliente imediatamente
+export async function approveSubscription(req, res) {
+  try {
+    const { id } = req.params;
+    const { adminId } = req.body;
+
+    // Busca a assinatura
+    const { data: sub, error: subErr } = await supabaseAdmin
+      .from('izaque_subscriptions')
+      .select('*, plan:izaque_plans(name, billing_cycle)')
+      .eq('id', id)
+      .single();
+
+    if (subErr || !sub) {
+      return res.status(404).json({ error: 'Pedido de assinatura não encontrado.' });
+    }
+
+    // Calcula validade (30 dias para mensal, 365 dias para anual)
+    const now = new Date();
+    const expiresAt = new Date(now);
+    if (sub.plan?.billing_cycle === 'annual') {
+      expiresAt.setDate(expiresAt.getDate() + 365);
+    } else {
+      expiresAt.setDate(expiresAt.getDate() + 30);
+    }
+
+    // 1. Atualiza a assinatura para 'active'
+    await supabaseAdmin
+      .from('izaque_subscriptions')
+      .update({
+        status: 'active',
+        approved_at: now.toISOString(),
+        approved_by: adminId || null,
+      })
+      .eq('id', id);
+
+    // 2. Atualiza o perfil do usuário
+    const { data: updatedProfile, error: profErr } = await supabaseAdmin
+      .from('izaque_profiles')
+      .update({
+        plan_id: sub.plan_id,
+        plan_status: 'active',
+        plan_activated_at: now.toISOString(),
+        plan_expires_at: expiresAt.toISOString(),
+        is_active: true, // Garante que o acesso está ativo
+        updated_at: now.toISOString(),
+      })
+      .eq('id', sub.user_id)
+      .select()
+      .single();
+
+    if (profErr) throw profErr;
+
+    // 3. Envia e-mail de parabéns e ativação para o cliente
+    sendSubscriptionApprovedNotification({
+      toEmail: sub.user_email,
+      userName: sub.user_name,
+      planName: sub.plan?.name || sub.plan_id,
+    }).catch((e) => console.warn('Aviso ao enviar e-mail de aprovação:', e));
+
+    console.log(`🎉 [Subscription Approved] Assinatura ${id} aprovada para ${sub.user_email}!`);
+    res.status(200).json({
+      success: true,
+      message: `Plano ${sub.plan?.name || sub.plan_id} ativado com sucesso para ${sub.user_email}!`,
+      profile: updatedProfile,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao aprovar assinatura:', error);
+    res.status(500).json({ error: 'Falha ao aprovar assinatura.', details: error.message });
+  }
+}
+
+// 19. Listar feedbacks, sugestões e reclamações recebidas de clientes
+export async function getAdminFeedbacks(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_feedbacks')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao buscar feedbacks:', error);
+    res.status(500).json({ error: 'Erro ao carregar mensagens de suporte.' });
+  }
+}
+

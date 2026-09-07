@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Feather, Shield, Wind, LogOut, Heart, Home, Edit3 } from 'lucide-react';
+import { Feather, Shield, Wind, LogOut, Heart, Home, Edit3, Sparkles, LifeBuoy } from 'lucide-react';
 
 export default function Navbar({
   user,
@@ -10,8 +10,11 @@ export default function Navbar({
   onLogout,
   onOpenOnboarding,
   onOpenProfile,
+  onOpenSubscription,
+  onOpenFeedback,
 }) {
   const isMasterOrAdmin = profile?.role === 'master' || profile?.role === 'admin';
+  const isSubscriber = profile?.plan_id && profile?.plan_id !== 'free';
   const [guideName, setGuideName] = useState(() => {
     return localStorage.getItem('izaque_guide_name') || 'Izaque';
   });
@@ -104,12 +107,46 @@ export default function Navbar({
               Super Admin
             </button>
           )}
+
+          {/* BOTÃO DE PLANOS & ASSINATURA */}
+          <button
+            type="button"
+            onClick={onOpenSubscription}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
+              isSubscriber
+                ? 'text-amber-700 dark:text-amber-400 hover:text-amber-800 font-serif'
+                : 'bg-teal-700/10 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 hover:bg-teal-700/20'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span>{isSubscriber ? 'Assinante Ativo' : 'Santuário Pleno'}</span>
+          </button>
         </nav>
 
         {/* ÁREA DO USUÁRIO OU ENTRADA */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Botão Mobile para Planos */}
+          <button
+            type="button"
+            onClick={onOpenSubscription}
+            className="md:hidden p-2 text-amber-600 dark:text-amber-400 hover:bg-stone-200/60 dark:hover:bg-slate-800 rounded-xl transition"
+            title="Planos & Assinaturas"
+          >
+            <Sparkles className="w-4 h-4" />
+          </button>
+
           {user ? (
             <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Botão de Suporte Oficial Lynx (Sugestões & Reclamações) */}
+              <button
+                type="button"
+                onClick={onOpenFeedback}
+                title="Suporte Oficial Lynx (Sugestões ou Reclamações)"
+                className="p-2 text-stone-500 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-800 rounded-xl transition"
+              >
+                <LifeBuoy className="w-4 h-4" />
+              </button>
+
               {/* Botão de Perfil com Avatar */}
               <button
                 type="button"

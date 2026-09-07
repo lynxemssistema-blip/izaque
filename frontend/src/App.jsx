@@ -10,6 +10,9 @@ import UserProfileModal from './components/UserProfileModal';
 import MobileBottomNav from './components/MobileBottomNav';
 import UserSettingsModal from './components/UserSettingsModal';
 import ResetPasswordModal from './components/ResetPasswordModal';
+import SubscriptionModal from './components/SubscriptionModal';
+import SubscriberFeedbackModal from './components/SubscriberFeedbackModal';
+import { AlertTriangle, LifeBuoy } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -18,6 +21,8 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [resetTokenHash, setResetTokenHash] = useState('');
+  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -179,6 +184,40 @@ export default function App() {
     }
   };
 
+  // BLOQUEIO DE ACESSO PELO SUPERADMIN
+  if (user && profile && profile.is_active === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-stone-50 dark:bg-slate-900 text-stone-800 dark:text-stone-100 text-center font-sans">
+        <div className="max-w-md p-8 sm:p-10 rounded-4xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 shadow-2xl space-y-4 animate-fadeIn">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-sm">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-serif font-medium text-stone-900 dark:text-stone-50">
+            Acesso Temporariamente Suspenso
+          </h2>
+          <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 font-serif leading-relaxed">
+            O acesso ao seu refúgio pessoal está temporariamente inativo por decisão administrativa ou pendência cadastral.
+          </p>
+          <div className="pt-4 space-y-2.5">
+            <a
+              href="mailto:suporte@lynxems.com.br"
+              className="w-full py-3.5 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold tracking-wide shadow-md shadow-teal-700/20 transition flex items-center justify-center gap-2"
+            >
+              <LifeBuoy className="w-4 h-4" />
+              <span>Falar com o Suporte Oficial</span>
+            </a>
+            <button
+              onClick={handleLogout}
+              className="w-full py-2.5 rounded-2xl bg-stone-100 dark:bg-slate-700 hover:bg-stone-200 dark:hover:bg-slate-600 text-xs font-medium text-stone-600 dark:text-stone-300 transition"
+            >
+              Encerrar Sessão
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`bg-stone-50 dark:bg-slate-900 text-stone-800 dark:text-stone-100 flex flex-col font-sans selection:bg-teal-700/20 selection:text-teal-900 dark:selection:text-teal-200 transition-colors duration-300 ${
@@ -210,6 +249,8 @@ export default function App() {
           onLogout={handleLogout}
           onOpenOnboarding={() => setShowOnboarding(true)}
           onOpenProfile={() => setIsProfileOpen(true)}
+          onOpenSubscription={() => setIsSubscriptionOpen(true)}
+          onOpenFeedback={() => setIsFeedbackOpen(true)}
         />
       </div>
 
@@ -334,6 +375,25 @@ export default function App() {
           }
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        user={user}
+        profile={profile}
+      />
+
+      {/* MODAL DE PLANOS & ASSINATURAS PIX */}
+      <SubscriptionModal
+        isOpen={isSubscriptionOpen}
+        onClose={() => setIsSubscriptionOpen(false)}
+        user={user}
+        profile={profile}
+        onPlanUpdated={() => {
+          if (user) loadUserProfile(user);
+        }}
+      />
+
+      {/* MODAL DE SUPORTE, SUGESTÕES E RECLAMAÇÕES LYNX */}
+      <SubscriberFeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
         user={user}
         profile={profile}
       />

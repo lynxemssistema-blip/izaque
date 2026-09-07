@@ -19,6 +19,12 @@ router.put('/profile/:userId', updateProfile);
 router.get('/agents', getActiveAgents);
 
 import { handleForgotPassword, handleTestEmail } from '../controllers/authController.js';
+import {
+  getPublicPlans,
+  createPixOrder,
+  sendSubscriberFeedback,
+  getUserSubscriptionStatus,
+} from '../controllers/subscriptionController.js';
 
 // Histórico de Conversas Persistente (Recupera após F5 / Reload)
 router.get('/chat/history/:userId', getChatHistory);
@@ -36,5 +42,11 @@ router.post('/voice', handleGenerateVoice);
 // Rotas de Autenticação e Suporte Oficial (Hostinger SMTP)
 router.post('/auth/forgot-password', handleForgotPassword);
 router.post('/auth/test-email', handleTestEmail);
+
+// Rotas de Planos, Checkout PIX e Suporte para Assinantes
+router.get('/plans', getPublicPlans);
+router.post('/subscription/pix-order', createPixOrder);
+router.post('/subscription/feedback', sendSubscriberFeedback);
+router.get('/subscription/status/:userId', getUserSubscriptionStatus);
 
 export default router;

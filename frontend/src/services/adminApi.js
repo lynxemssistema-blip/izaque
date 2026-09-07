@@ -261,3 +261,122 @@ export async function fetchDocumentChunks(agentId, docId) {
   if (error) throw error;
   return data || [];
 }
+
+// ==========================================
+// GESTÃO DE PLANOS E ASSINATURAS (SUPERADMIN)
+// ==========================================
+
+export async function fetchAdminPlans() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/plans`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_plans')
+    .select('*')
+    .order('price', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updateAdminPlan(planId, updates) {
+  const res = await fetch(`${BACKEND_URL}/api/admin/plans/${planId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao atualizar plano.');
+  }
+
+  return await res.json();
+}
+
+export async function updateUserStatus(userId, isActive) {
+  const res = await fetch(`${BACKEND_URL}/api/admin/users/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, isActive }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao alterar status do usuário.');
+  }
+
+  return await res.json();
+}
+
+export async function updateUserPlan(userId, planId, planStatus = 'active') {
+  const res = await fetch(`${BACKEND_URL}/api/admin/users/plan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, planId, planStatus }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao atualizar plano do usuário.');
+  }
+
+  return await res.json();
+}
+
+export async function fetchAdminSubscriptions() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/subscriptions`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_subscriptions')
+    .select('*, plan:izaque_plans(name, billing_cycle)')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function approveSubscription(subId, adminId) {
+  const res = await fetch(`${BACKEND_URL}/api/admin/subscriptions/${subId}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ adminId }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao aprovar assinatura.');
+  }
+
+  return await res.json();
+}
+
+export async function fetchAdminFeedbacks() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/feedbacks`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_feedbacks')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+

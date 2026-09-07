@@ -451,3 +451,81 @@ export async function requestPasswordReset(email) {
   }
 }
 
+/**
+ * Busca planos ativos disponíveis para o cliente
+ */
+export async function fetchPublicPlans() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/plans`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch {}
+
+  // Fallback direto ao Supabase
+  const { data, error } = await supabase
+    .from('izaque_plans')
+    .select('*')
+    .eq('is_active', true)
+    .order('price', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Cria um pedido de assinatura PIX
+ */
+export async function createPixOrder({ planId, userId, userEmail, userName }) {
+  const res = await fetch(`${BACKEND_URL}/api/subscription/pix-order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ planId, userId, userEmail, userName }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Falha ao processar pedido PIX.');
+  }
+
+  return data;
+}
+
+/**
+ * Envia sugestão, reclamação ou pedido de suporte do assinante
+ */
+export async function sendSubscriberFeedback({ userId, userEmail, userName, type, subject, message }) {
+  const res = await fetch(`${BACKEND_URL}/api/subscription/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, userEmail, userName, type, subject, message }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Falha ao enviar mensagem ao suporte.');
+  }
+
+  return data;
+}
+
+/**
+ * Consulta dados e status de assinatura do usuário
+ */
+export async function fetchUserSubscriptionStatus(userId) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/subscription/status/${userId}`);
+    if (res.ok) return await res.json();
+  } catch {}
+
+  const { data: profile } = await supabase
+    .from('izaque_profiles')
+    .select('id, plan_id, is_active, plan_status, plan_activated_at, plan_expires_at')
+    .eq('id', userId)
+    .single();
+
+  return { profile, latestOrder: null };
+}
+
+
