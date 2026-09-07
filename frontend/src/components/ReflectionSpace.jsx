@@ -809,50 +809,6 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         </div>
       </header>
 
-      {/* SELETOR DE MENTOR / ESPECIALISTA */}
-      <div className="px-3 sm:px-6 py-2 bg-white/60 dark:bg-slate-900/60 border-b border-stone-200/70 dark:border-slate-800/70 backdrop-blur-md flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar shrink-0">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-stone-400 dark:text-stone-500 shrink-0 mr-1 hidden sm:inline">
-          Mentor:
-        </span>
-        <button
-          type="button"
-          onClick={() => setSelectedAgentId('auto')}
-          className={`px-3 py-1 rounded-full text-xs font-serif transition-all flex items-center gap-1.5 border shrink-0 active:scale-95 ${
-            selectedAgentId === 'auto'
-              ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-              : 'bg-stone-100/90 dark:bg-slate-800/80 text-stone-600 dark:text-stone-300 border-stone-200/80 dark:border-slate-700 hover:border-teal-500'
-          }`}
-        >
-          <span>🧠</span>
-          <span>Orquestrador IZAQUE</span>
-        </button>
-        {activeAgents.map((ag) => (
-          <button
-            key={ag.id}
-            type="button"
-            onClick={() => setSelectedAgentId(ag.id)}
-            className={`px-3 py-1 rounded-full text-xs font-serif transition-all flex items-center gap-1.5 border shrink-0 active:scale-95 ${
-              selectedAgentId === ag.id
-                ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-                : 'bg-stone-100/90 dark:bg-slate-800/80 text-stone-600 dark:text-stone-300 border-stone-200/80 dark:border-slate-700 hover:border-teal-500'
-            }`}
-          >
-            <span>
-              {ag.slug === 'renato-sobriedade'
-                ? '🕊️'
-                : ag.slug === 'pastor-joao-biblico'
-                ? '📖'
-                : ag.slug === 'mentor-financeiro'
-                ? '💎'
-                : ag.slug === 'mentora-lideranca'
-                ? '⚡'
-                : '🏛️'}
-            </span>
-            <span>{ag.name}</span>
-          </button>
-        ))}
-      </div>
-
       {/* SAUDAÇÃO CONTEXTUAL */}
       <div className="px-4 sm:px-6 py-2 bg-stone-100/70 dark:bg-slate-800/40 border-b border-stone-200/60 dark:border-slate-800/60 text-xs text-stone-600 dark:text-stone-300 flex items-center gap-2 shrink-0">
         {greeting.icon}
