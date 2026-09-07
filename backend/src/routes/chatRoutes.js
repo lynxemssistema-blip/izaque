@@ -24,6 +24,7 @@ import {
   createPixOrder,
   sendSubscriberFeedback,
   getUserSubscriptionStatus,
+  getPublicCreator,
 } from '../controllers/subscriptionController.js';
 
 // Histórico de Conversas Persistente (Recupera após F5 / Reload)
@@ -48,5 +49,8 @@ router.get('/plans', getPublicPlans);
 router.post('/subscription/pix-order', createPixOrder);
 router.post('/subscription/feedback', sendSubscriberFeedback);
 router.get('/subscription/status/:userId', getUserSubscriptionStatus);
+
+// Rota do Perfil Público do Idealizador do IZAQUE
+router.get('/creator', getPublicCreator);
 
 export default router;

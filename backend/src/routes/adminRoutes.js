@@ -19,6 +19,8 @@ import {
   getAdminSubscriptions,
   approveSubscription,
   getAdminFeedbacks,
+  getAdminCreator,
+  updateAdminCreator,
 } from '../controllers/adminController.js';
 
 const router = Router();
@@ -46,6 +48,10 @@ router.put('/admin/plans/:id', updateAdminPlan);
 router.get('/admin/subscriptions', getAdminSubscriptions);
 router.post('/admin/subscriptions/:id/approve', approveSubscription);
 router.get('/admin/feedbacks', getAdminFeedbacks);
+
+// Gestão do Perfil do Idealizador (Superadmin)
+router.get('/admin/creator', getAdminCreator);
+router.put('/admin/creator', updateAdminCreator);
 
 export default router;
 

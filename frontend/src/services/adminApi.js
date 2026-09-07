@@ -380,3 +380,77 @@ export async function fetchAdminFeedbacks() {
   return data || [];
 }
 
+export async function fetchAdminCreator() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/creator`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_creator')
+    .select('*')
+    .eq('id', 'main')
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data || {};
+}
+
+export async function updateAdminCreator(creatorData) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/creator`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(creatorData),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  // Fallback direto ao Supabase
+  const { data, error } = await supabase
+    .from('izaque_creator')
+    .upsert({
+      id: 'main',
+      ...creatorData,
+      updated_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { success: true, creator: data };
+}
+
+export async function uploadCreatorPhoto(file) {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `creator_${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('❌ Erro no upload de foto do idealizador:', error);
+    throw error;
+  }
+}
+
+
+

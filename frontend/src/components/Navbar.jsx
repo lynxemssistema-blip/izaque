@@ -34,9 +34,9 @@ export default function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-xl transition-colors">
+    <header className="w-full border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-xl transition-colors shadow-xs">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
-        {/* LOGO DO SANTUÁRIO */}
+        {/* LOGO DA MENTORIA */}
         <div
           onClick={() => setActiveTab('landing')}
           className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer group min-w-0"
@@ -119,7 +119,7 @@ export default function Navbar({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-            <span>{isSubscriber ? 'Assinante Ativo' : 'Santuário Pleno'}</span>
+            <span>{isSubscriber ? 'Assinante Ativo' : 'Planos de Acesso'}</span>
           </button>
         </nav>
 

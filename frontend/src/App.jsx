@@ -233,8 +233,8 @@ export default function App() {
         />
       )}
 
-      {/* NAVBAR DO SANTUÁRIO - No celular esconde durante o chat para evitar cabeçalho duplo e ganhar espaço */}
-      <div className={activeTab === 'chat' ? 'hidden md:block shrink-0' : 'shrink-0'}>
+      {/* BARRA SUPERIOR FIXA (NAVBAR) - Permanece sempre visível no topo da tela durante a navegação */}
+      <div className={`sticky top-0 z-50 w-full shrink-0 ${activeTab === 'chat' ? 'hidden md:block' : ''}`}>
         <Navbar
           user={user}
           profile={profile}

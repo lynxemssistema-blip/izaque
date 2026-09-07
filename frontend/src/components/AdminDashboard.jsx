@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users,
   Feather,
@@ -26,6 +26,11 @@ import {
   Clock,
   Send,
   Lightbulb,
+  Award,
+  Globe,
+  Upload,
+  Camera,
+  Loader2,
 } from 'lucide-react';
 import {
   fetchAdminMetrics,
@@ -42,6 +47,9 @@ import {
   fetchAdminSubscriptions,
   approveSubscription,
   fetchAdminFeedbacks,
+  fetchAdminCreator,
+  updateAdminCreator,
+  uploadCreatorPhoto,
 } from '../services/adminApi';
 import CreateAgentModal from './CreateAgentModal';
 import AgentKnowledgeManager from './AgentKnowledgeManager';
@@ -78,10 +86,27 @@ export default function AdminDashboard({ currentUser }) {
   const [featuresText, setFeaturesText] = useState('');
   const [savingPlan, setSavingPlan] = useState(false);
 
+  // Perfil do Idealizador do Izaque
+  const [creatorData, setCreatorData] = useState({
+    name: 'Edson Manoel',
+    title: 'Idealizador & Criador do IZAQUE',
+    bio: '',
+    story: '',
+    quote: '',
+    image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop',
+    social_instagram: '',
+    social_linkedin: '',
+    social_whatsapp: '',
+    is_visible: true,
+  });
+  const [savingCreator, setSavingCreator] = useState(false);
+  const [uploadingCreatorPhoto, setUploadingCreatorPhoto] = useState(false);
+  const fileInputRef = useRef(null);
+
   const loadAllData = async () => {
     try {
       setRefreshing(true);
-      const [m, u, mem, ag, p, s, f] = await Promise.all([
+      const [m, u, mem, ag, p, s, f, cr] = await Promise.all([
         fetchAdminMetrics().catch(() => null),
         fetchAdminUsers().catch(() => []),
         fetchAdminMemories().catch(() => []),
@@ -89,6 +114,7 @@ export default function AdminDashboard({ currentUser }) {
         fetchAdminPlans().catch(() => []),
         fetchAdminSubscriptions().catch(() => []),
         fetchAdminFeedbacks().catch(() => []),
+        fetchAdminCreator().catch(() => null),
       ]);
 
       setMetrics(m);
@@ -98,6 +124,9 @@ export default function AdminDashboard({ currentUser }) {
       setPlans(p);
       setSubscriptions(s);
       setFeedbacks(f);
+      if (cr && cr.name) {
+        setCreatorData(cr);
+      }
 
       if (ag.length > 0 && !selectedAgent) {
         setSelectedAgent(ag[0]);
@@ -194,6 +223,59 @@ export default function AdminDashboard({ currentUser }) {
       loadAllData();
     } catch (err) {
       alert('Erro ao aprovar assinatura: ' + err.message);
+    }
+  };
+
+  // Upload de foto do Idealizador a partir do computador ou celular
+  const handlePhotoFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 8 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 8MB.');
+      return;
+    }
+
+    try {
+      setUploadingCreatorPhoto(true);
+
+      // Preview local imediato
+      const localPreview = URL.createObjectURL(file);
+      setCreatorData((prev) => ({ ...prev, image_url: localPreview }));
+
+      // Upload para o Supabase Storage (bucket avatars)
+      const publicUrl = await uploadCreatorPhoto(file);
+      setCreatorData((prev) => ({ ...prev, image_url: publicUrl }));
+      setFeedbackMsg('Foto carregada com sucesso! Clique em "Salvar Apresentação do Idealizador" para confirmar.');
+      setTimeout(() => setFeedbackMsg(''), 4000);
+    } catch (err) {
+      console.warn('Fallback para Base64 devido a erro no Storage:', err);
+      const reader = new FileReader();
+      reader.onload = (loadEvt) => {
+        setCreatorData((prev) => ({ ...prev, image_url: loadEvt.target.result }));
+        setFeedbackMsg('Foto convertida e pronta para salvar!');
+        setTimeout(() => setFeedbackMsg(''), 4000);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingCreatorPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Salvar apresentação do Idealizador
+  const handleSaveCreator = async (e) => {
+    e?.preventDefault();
+    setSavingCreator(true);
+    try {
+      await updateAdminCreator(creatorData);
+      setFeedbackMsg('Apresentação do Idealizador salva com sucesso!');
+      setTimeout(() => setFeedbackMsg(''), 3500);
+      loadAllData();
+    } catch (err) {
+      alert('Erro ao salvar dados do idealizador: ' + err.message);
+    } finally {
+      setSavingCreator(false);
     }
   };
 
@@ -405,6 +487,18 @@ export default function AdminDashboard({ currentUser }) {
             </button>
 
             <button
+              onClick={() => setActiveTab('creator')}
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+                activeTab === 'creator'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              Idealizador do IZAQUE
+            </button>
+
+            <button
               onClick={() => setActiveTab('memories')}
               className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
                 activeTab === 'memories'
@@ -572,7 +666,7 @@ export default function AdminDashboard({ currentUser }) {
             {/* LISTA DE PLANOS CADASTRADOS */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-500 mb-2">
-                Planos do Santuário
+                Planos de Mentoria
               </h3>
               {plans.map((p) => {
                 const isSelected = selectedPlanId === p.id;
@@ -917,6 +1011,275 @@ export default function AdminDashboard({ currentUser }) {
                   );
                 })
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ABA: IDEALIZADOR DO IZAQUE (CONFIGURAÇÃO & APRESENTAÇÃO) */}
+        {activeTab === 'creator' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* FORMULÁRIO DE EDIÇÃO */}
+            <div className="lg:col-span-7 p-5 sm:p-8 rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-stone-100 dark:border-slate-700/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 flex items-center justify-center text-teal-800 dark:text-teal-400">
+                    <Award className="w-5 h-5 stroke-[1.75]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-serif font-medium text-stone-900 dark:text-stone-100">
+                      Apresentação do Idealizador
+                    </h3>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">
+                      Configure os dados exibidos no início da página principal
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={creatorData.is_visible !== false}
+                    onChange={(e) => setCreatorData({ ...creatorData, is_visible: e.target.checked })}
+                    className="w-4 h-4 text-teal-700 rounded focus:ring-teal-500"
+                  />
+                  <span className="text-xs font-medium text-stone-700 dark:text-stone-300">
+                    Visível no site
+                  </span>
+                </label>
+              </div>
+
+              <form onSubmit={handleSaveCreator} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Nome do Idealizador
+                    </label>
+                    <input
+                      type="text"
+                      value={creatorData.name || ''}
+                      onChange={(e) => setCreatorData({ ...creatorData, name: e.target.value })}
+                      placeholder="Ex: Edson Manoel"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                      Título / Cargo
+                    </label>
+                    <input
+                      type="text"
+                      value={creatorData.title || ''}
+                      onChange={(e) => setCreatorData({ ...creatorData, title: e.target.value })}
+                      placeholder="Ex: Idealizador & Criador do IZAQUE"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1.5">
+                    Foto do Idealizador (Upload ou Link)
+                  </label>
+
+                  {/* Input Invisível para Upload de Imagem */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handlePhotoFileSelected}
+                    accept="image/*"
+                    className="hidden"
+                  />
+
+                  {/* Botão de Upload Direto do Dispositivo */}
+                  <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingCreatorPhoto}
+                      className="px-4 py-2.5 rounded-xl bg-teal-700/15 hover:bg-teal-700/25 border border-teal-700/30 dark:border-teal-500/30 text-teal-900 dark:text-teal-200 text-xs font-medium transition flex items-center gap-2 shrink-0 active:scale-95 disabled:opacity-50"
+                    >
+                      {uploadingCreatorPhoto ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-teal-700 dark:text-teal-400" />
+                          <span>Enviando foto...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                          <span>Fazer Upload do Celular / PC</span>
+                        </>
+                      )}
+                    </button>
+
+                    <span className="text-[11px] text-stone-400 font-serif">
+                      ou insira a URL direta da imagem:
+                    </span>
+                  </div>
+
+                  <div className="flex gap-3 items-center">
+                    <input
+                      type="url"
+                      value={creatorData.image_url || ''}
+                      onChange={(e) => setCreatorData({ ...creatorData, image_url: e.target.value })}
+                      placeholder="https://exemplo.com/sua-foto.jpg"
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                    />
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-stone-200 dark:bg-slate-700 shrink-0 border-2 border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center shadow-sm">
+                      <img
+                        src={creatorData.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop'}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop';
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-stone-400 mt-1">
+                    Você pode escolher uma foto salva no celular/computador ou digitar a URL direta.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                    Apresentação Resumida (Bio)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={creatorData.bio || ''}
+                    onChange={(e) => setCreatorData({ ...creatorData, bio: e.target.value })}
+                    placeholder="Quem é o idealizador e qual a sua paixão/trajetória..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                    Por que criei o IZAQUE (Propósito & Trajetória)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={creatorData.story || ''}
+                    onChange={(e) => setCreatorData({ ...creatorData, story: e.target.value })}
+                    placeholder="Conte o motivo que fez você conceber este espaço de escuta e desenvolvimento..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 dark:text-stone-300 mb-1">
+                    Frase de Inspiração / Citação Pessoal
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={creatorData.quote || ''}
+                    onChange={(e) => setCreatorData({ ...creatorData, quote: e.target.value })}
+                    placeholder='"O verdadeiro crescimento não começa quando..."'
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-400 mb-1">
+                      Instagram (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={creatorData.social_instagram || ''}
+                      onChange={(e) => setCreatorData({ ...creatorData, social_instagram: e.target.value })}
+                      placeholder="@edsonmanoel"
+                      className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-400 mb-1">
+                      LinkedIn (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={creatorData.social_linkedin || ''}
+                      onChange={(e) => setCreatorData({ ...creatorData, social_linkedin: e.target.value })}
+                      placeholder="edson-manoel"
+                      className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-400 mb-1">
+                      WhatsApp (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={creatorData.social_whatsapp || ''}
+                      onChange={(e) => setCreatorData({ ...creatorData, social_whatsapp: e.target.value })}
+                      placeholder="(11) 99999-9999"
+                      className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-900 text-xs text-stone-800 dark:text-stone-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-stone-100 dark:border-slate-700/60 flex items-center justify-end gap-3">
+                  <button
+                    type="submit"
+                    disabled={savingCreator}
+                    className="px-6 py-3 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-medium shadow-md shadow-teal-700/20 transition flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{savingCreator ? 'Salvando...' : 'Salvar Apresentação do Idealizador'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* PRÉ-VISUALIZAÇÃO EM TEMPO REAL */}
+            <div className="lg:col-span-5 space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                Prévia ao Vivo na Página Principal
+              </h3>
+
+              <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700 shadow-sm space-y-4">
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-3">
+                    <div className="w-28 h-28 rounded-3xl overflow-hidden border-2 border-teal-700/30 dark:border-teal-500/30 shadow-md bg-stone-100 dark:bg-slate-700">
+                      <img
+                        src={creatorData.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop'}
+                        alt={creatorData.name || 'Idealizador'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop';
+                        }}
+                      />
+                    </div>
+                    <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-teal-700 text-white shadow-sm whitespace-nowrap">
+                      Idealizador
+                    </span>
+                  </div>
+
+                  <h4 className="text-lg font-serif font-medium text-stone-900 dark:text-stone-50">
+                    {creatorData.name || 'Edson Manoel'}
+                  </h4>
+                  <p className="text-[11px] text-teal-800 dark:text-teal-400 font-serif">
+                    {creatorData.title || 'Idealizador & Criador do IZAQUE'}
+                  </p>
+                </div>
+
+                <div className="space-y-2 text-xs text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
+                  <p>{creatorData.bio || 'Apresentação do idealizador...'}</p>
+                  {creatorData.story && (
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 pt-1 border-t border-stone-100 dark:border-slate-700/60">
+                      {creatorData.story}
+                    </p>
+                  )}
+                </div>
+
+                {creatorData.quote && (
+                  <div className="p-3 rounded-2xl bg-teal-50 dark:bg-teal-950/30 border-l-3 border-teal-700 text-teal-900 dark:text-teal-200 text-xs italic font-serif leading-relaxed">
+                    {creatorData.quote}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

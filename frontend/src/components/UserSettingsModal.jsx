@@ -339,7 +339,7 @@ export default function UserSettingsModal({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-serif font-medium tracking-tight">
-                Preferências do Santuário
+                Preferências da Mentoria
               </h2>
               <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
                 <Globe className="w-3 h-3 text-teal-600 dark:text-teal-400 inline" />

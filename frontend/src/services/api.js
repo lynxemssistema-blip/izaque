@@ -28,7 +28,7 @@ const BACKEND_URL = resolveBackendUrl();
 
 /**
  * Remove formatações Markdown, emojis, URLs e caracteres que quebram o fluxo da fala.
- * Otimizado para entonação calma e meditativa do santuário.
+ * Otimizado para entonação calma e meditativa da mentoria.
  */
 export function cleanTextForSpeech(text) {
   if (!text) return '';
@@ -427,6 +427,36 @@ export async function uploadUserAvatar(userId, file) {
 }
 
 /**
+ * Upload de foto do idealizador para o Supabase Storage (bucket avatars)
+ * @param {File} file
+ * @returns {Promise<string>} URL pública da foto
+ */
+export async function uploadCreatorPhoto(file) {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `creator_${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('❌ Erro ao fazer upload de foto do idealizador:', error);
+    throw error;
+  }
+}
+
+/**
  * Solicita o envio do e-mail de recuperação de senha via suporte@lynxems.com.br
  * @param {string} email
  * @returns {Promise<{message: string, sentTo?: string}>}
@@ -527,5 +557,53 @@ export async function fetchUserSubscriptionStatus(userId) {
 
   return { profile, latestOrder: null };
 }
+
+/**
+ * Consulta dados públicos do Idealizador para a Landing Page
+ */
+export async function fetchPublicCreator() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/creator`);
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Aviso ao buscar dados do idealizador:', err);
+  }
+
+  const { data } = await supabase
+    .from('izaque_creator')
+    .select('name, title, bio, story, quote, image_url, social_instagram, social_linkedin, social_whatsapp, is_visible')
+    .eq('id', 'main')
+    .maybeSingle();
+
+  return data;
+}
+
+/**
+ * Consulta dados completos do Idealizador para o Painel Admin
+ */
+export async function fetchAdminCreator() {
+  const res = await fetch(`${BACKEND_URL}/api/admin/creator`);
+  if (!res.ok) throw new Error('Falha ao carregar perfil do idealizador.');
+  return await res.json();
+}
+
+/**
+ * Atualiza dados do Idealizador pelo Super Admin
+ */
+export async function updateAdminCreator(creatorData) {
+  const res = await fetch(`${BACKEND_URL}/api/admin/creator`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(creatorData),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Falha ao salvar dados do idealizador.');
+  }
+
+  return data;
+}
+
 
 

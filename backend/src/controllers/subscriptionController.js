@@ -187,3 +187,21 @@ export async function getUserSubscriptionStatus(req, res) {
     res.status(500).json({ error: 'Erro ao buscar dados da assinatura.' });
   }
 }
+
+// 5. Obter dados públicos do Idealizador para a Landing Page
+export async function getPublicCreator(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_creator')
+      .select('name, title, bio, story, quote, image_url, social_instagram, social_linkedin, social_whatsapp, is_visible')
+      .eq('id', 'main')
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    res.status(200).json(data || null);
+  } catch (error) {
+    console.error('❌ Erro ao buscar dados públicos do idealizador:', error);
+    res.status(500).json({ error: 'Erro ao carregar dados do idealizador.' });
+  }
+}
+

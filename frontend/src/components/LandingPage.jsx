@@ -21,11 +21,15 @@ import {
   Lock,
   EyeOff,
   HeartHandshake,
+  Award,
+  Globe,
+  MessageSquare,
 } from 'lucide-react';
-import { fetchPublicPlans } from '../services/api';
+import { fetchPublicPlans, fetchPublicCreator } from '../services/api';
 
 export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
   const [plans, setPlans] = useState([]);
+  const [creator, setCreator] = useState(null);
 
   useEffect(() => {
     fetchPublicPlans()
@@ -35,6 +39,12 @@ export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
         }
       })
       .catch((err) => console.warn('Aviso ao carregar planos na landing:', err));
+
+    fetchPublicCreator()
+      .then((data) => {
+        if (data) setCreator(data);
+      })
+      .catch((err) => console.warn('Aviso ao carregar dados do idealizador:', err));
   }, []);
 
   return (
@@ -124,6 +134,112 @@ export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
         </div>
       </section>
 
+      {/* 1.1 APRESENTAÇÃO DO IDEALIZADOR DO IZAQUE (NO INÍCIO DA PÁGINA) */}
+      {(!creator || creator.is_visible !== false) && (
+        <section id="idealizador" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto scroll-mt-12">
+          <div className="p-6 sm:p-12 rounded-3xl sm:rounded-4xl bg-white dark:bg-slate-800/80 border border-stone-200/80 dark:border-slate-700/80 shadow-lg relative overflow-hidden">
+            {/* Efeito orgânico sutil de fundo */}
+            <div className="absolute top-0 right-0 w-72 h-72 bg-teal-600/5 dark:bg-teal-500/10 rounded-full blur-3xl pointer-events-none -mr-24 -mt-24" />
+
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-8 lg:gap-12 relative z-10">
+              {/* FOTO E IDENTIFICAÇÃO DO IDEALIZADOR */}
+              <div className="flex flex-col items-center text-center shrink-0 w-full md:w-64">
+                <div className="relative group">
+                  <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-3xl sm:rounded-4xl overflow-hidden border-2 border-teal-700/30 dark:border-teal-500/30 shadow-md bg-stone-100 dark:bg-slate-700 flex items-center justify-center">
+                    <img
+                      src={creator?.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop'}
+                      alt={creator?.name || 'Idealizador do IZAQUE'}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop';
+                      }}
+                    />
+                  </div>
+                  <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-700 text-white shadow-sm whitespace-nowrap">
+                    Idealizador
+                  </span>
+                </div>
+
+                <h3 className="text-xl font-serif font-medium text-stone-900 dark:text-stone-50 mt-5">
+                  {creator?.name || 'Edson Manoel'}
+                </h3>
+                <p className="text-xs text-teal-800 dark:text-teal-400 font-serif mt-0.5">
+                  {creator?.title || 'Idealizador & Criador do IZAQUE'}
+                </p>
+
+                {/* Redes Sociais / Links de Contato */}
+                {(creator?.social_instagram || creator?.social_linkedin || creator?.social_whatsapp) && (
+                  <div className="flex items-center gap-2 mt-4 text-stone-500 dark:text-stone-400">
+                    {creator?.social_instagram && (
+                      <a
+                        href={creator.social_instagram.startsWith('http') ? creator.social_instagram : `https://instagram.com/${creator.social_instagram.replace('@', '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-xl bg-stone-100 dark:bg-slate-700 hover:text-teal-700 dark:hover:text-teal-400 transition"
+                        title="Instagram"
+                      >
+                        <Globe className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {creator?.social_linkedin && (
+                      <a
+                        href={creator.social_linkedin.startsWith('http') ? creator.social_linkedin : `https://linkedin.com/in/${creator.social_linkedin}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-xl bg-stone-100 dark:bg-slate-700 hover:text-teal-700 dark:hover:text-teal-400 transition"
+                        title="LinkedIn"
+                      >
+                        <Award className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {creator?.social_whatsapp && (
+                      <a
+                        href={`https://wa.me/${creator.social_whatsapp.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-xl bg-stone-100 dark:bg-slate-700 hover:text-teal-700 dark:hover:text-teal-400 transition"
+                        title="WhatsApp"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* MENSAGEM, HISTÓRIA E CITAÇÃO */}
+              <div className="space-y-4 text-center md:text-left flex-1 min-w-0">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 border border-teal-200/80 dark:border-teal-800/40 text-teal-800 dark:text-teal-300 text-[11px] font-serif">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <span>Mensagem de Boas-Vindas</span>
+                </div>
+
+                <h4 className="text-xl sm:text-3xl font-serif font-normal text-stone-900 dark:text-stone-50 leading-snug">
+                  Por que este refúgio de clareza foi concebido para você
+                </h4>
+
+                <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
+                  {creator?.bio || 'Empreendedor, mentor de clareza e apaixonado pelo potencial humano. Concebeu o Izaque após anos observando como o excesso de ruído diário, a autocobrança desmedida e a solidão nas decisões travam vidas brilhantes.'}
+                </p>
+
+                {creator?.story && (
+                  <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-serif leading-relaxed pt-1">
+                    {creator.story}
+                  </p>
+                )}
+
+                {/* Citação Inspiradora em Destaque */}
+                {creator?.quote && (
+                  <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-teal-50/70 dark:bg-teal-950/30 border-l-4 border-teal-700 dark:border-teal-500 text-teal-900 dark:text-teal-200 font-serif italic text-xs sm:text-sm leading-relaxed shadow-xs">
+                    {creator.quote}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 2. QUEM É IZAQUE E O QUE ELE FAZ POR VOCÊ */}
       <section id="quem-e-izaque" className="py-20 bg-stone-100/60 dark:bg-slate-800/30 border-y border-stone-200/80 dark:border-slate-800 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto space-y-16">
@@ -179,7 +295,7 @@ export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
         </div>
       </section>
 
-      {/* 3. SANTUÁRIO DE CONFIANÇA: SIGILO ABSOLUTO, NÃO JULGAMENTO & VANTAGENS */}
+      {/* 3. ESPAÇO DE CONFIANÇA: SIGILO ABSOLUTO, NÃO JULGAMENTO & VANTAGENS */}
       <section id="sigilo-seguranca" className="py-20 sm:py-24 bg-stone-100/70 dark:bg-slate-800/40 border-y border-stone-200/80 dark:border-slate-800 px-4 sm:px-6 lg:px-8 scroll-mt-12">
         <div className="max-w-6xl mx-auto space-y-14">
           <div className="text-center max-w-3xl mx-auto space-y-4">
@@ -191,7 +307,7 @@ export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
               O que você fala aqui, <span className="italic font-medium text-teal-800 dark:text-teal-300">fica apenas aqui.</span>
             </h2>
             <p className="text-xs sm:text-base text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
-              No dia a dia, muitas vezes precisamos medir palavras, engolir sentimentos e fingir que temos tudo sob controle. No Santuário Izaque, a proteção da sua intimidade e a ausência de julgamento são o alicerce de cada conversa.
+              No dia a dia, muitas vezes precisamos medir palavras, engolir sentimentos e fingir que temos tudo sob controle. No espaço da mentoria Izaque, a proteção da sua intimidade e a ausência de julgamento são o alicerce de cada conversa.
             </p>
           </div>
 
@@ -391,7 +507,7 @@ export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 border border-teal-200/80 dark:border-teal-800/40 text-xs font-serif text-teal-800 dark:text-teal-300">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Planos de Mentoria & Santuário</span>
+            <span>Planos de Mentoria & Acesso</span>
           </div>
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-serif font-normal text-stone-900 dark:text-stone-50 tracking-tight">
             Escolha como deseja caminhar
@@ -532,7 +648,7 @@ export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
           {(() => {
             const annualPlan = plans.find((p) => p.id === 'pro_annual') || {
               id: 'pro_annual',
-              name: 'Santuário Pleno (Anual)',
+              name: 'Mentoria Plena (Anual)',
               price: 247.0,
               description: 'A experiência máxima de mentoria com desconto de 30% e benefícios exclusivos.',
               features: [

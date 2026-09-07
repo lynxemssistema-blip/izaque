@@ -573,3 +573,68 @@ export async function getAdminFeedbacks(req, res) {
   }
 }
 
+// 20. Obter perfil do Idealizador do IZAQUE
+export async function getAdminCreator(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_creator')
+      .select('*')
+      .eq('id', 'main')
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    res.status(200).json(data || {});
+  } catch (error) {
+    console.error('❌ Erro ao buscar dados do idealizador:', error);
+    res.status(500).json({ error: 'Erro ao carregar dados do idealizador.' });
+  }
+}
+
+// 21. Atualizar perfil do Idealizador pelo Super Admin
+export async function updateAdminCreator(req, res) {
+  try {
+    const {
+      name,
+      title,
+      bio,
+      story,
+      quote,
+      image_url,
+      social_instagram,
+      social_linkedin,
+      social_whatsapp,
+      is_visible,
+    } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_creator')
+      .upsert({
+        id: 'main',
+        name: name || 'Edson Manoel',
+        title: title || 'Idealizador & Criador do IZAQUE',
+        bio: bio || '',
+        story: story || '',
+        quote: quote || '',
+        image_url: image_url || '',
+        social_instagram: social_instagram || null,
+        social_linkedin: social_linkedin || null,
+        social_whatsapp: social_whatsapp || null,
+        is_visible: is_visible !== undefined ? is_visible : true,
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(200).json({
+      success: true,
+      message: 'Perfil do Idealizador atualizado com sucesso!',
+      creator: data,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao atualizar perfil do idealizador:', error);
+    res.status(500).json({ error: 'Falha ao salvar dados do idealizador.', details: error.message });
+  }
+}
+
+

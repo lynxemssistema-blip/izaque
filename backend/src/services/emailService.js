@@ -59,7 +59,7 @@ export async function sendTestEmail(toEmail) {
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 580px; margin: 0 auto; background-color: #faf9f6; padding: 32px; border-radius: 24px; border: 1px solid #e7e5e4; color: #292524;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h1 style="color: #0f766e; font-size: 26px; margin: 0; font-weight: 600;">IZAQUE</h1>
-          <p style="color: #78716c; font-size: 13px; margin-top: 4px;">Santuário & Mentoria de Vida</p>
+          <p style="color: #78716c; font-size: 13px; margin-top: 4px;">Espaço de Clareza & Mentoria de Vida</p>
         </div>
 
         <div style="background-color: #ffffff; padding: 28px; border-radius: 20px; border: 1px solid #f5f5f4; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
@@ -107,7 +107,7 @@ export async function sendPasswordResetEmail({ toEmail, name, resetLink }) {
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 580px; margin: 0 auto; background-color: #faf9f6; padding: 32px; border-radius: 24px; border: 1px solid #e7e5e4; color: #292524;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h1 style="color: #0f766e; font-size: 26px; margin: 0; font-weight: 600;">IZAQUE</h1>
-          <p style="color: #78716c; font-size: 13px; margin-top: 4px;">Santuário & Mentoria de Vida</p>
+          <p style="color: #78716c; font-size: 13px; margin-top: 4px;">Espaço de Clareza & Mentoria de Vida</p>
         </div>
 
         <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; border: 1px solid #f5f5f4; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
@@ -165,7 +165,7 @@ export async function sendSubscriptionOrderNotification({ toEmail, userName, pla
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 580px; margin: 0 auto; background-color: #faf9f6; padding: 32px; border-radius: 24px; border: 1px solid #e7e5e4; color: #292524;">
           <div style="text-align: center; margin-bottom: 24px;">
             <h1 style="color: #0f766e; font-size: 26px; margin: 0; font-weight: 600;">IZAQUE</h1>
-            <p style="color: #78716c; font-size: 13px; margin-top: 4px;">Santuário & Mentoria de Vida</p>
+            <p style="color: #78716c; font-size: 13px; margin-top: 4px;">Espaço de Clareza & Mentoria de Vida</p>
           </div>
 
           <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; border: 1px solid #f5f5f4; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
@@ -235,7 +235,7 @@ export async function sendSubscriptionApprovedNotification({ toEmail, userName, 
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 580px; margin: 0 auto; background-color: #faf9f6; padding: 32px; border-radius: 24px; border: 1px solid #e7e5e4; color: #292524;">
           <div style="text-align: center; margin-bottom: 24px;">
             <h1 style="color: #0f766e; font-size: 26px; margin: 0; font-weight: 600;">IZAQUE</h1>
-            <p style="color: #78716c; font-size: 13px; margin-top: 4px;">Santuário & Mentoria de Vida</p>
+            <p style="color: #78716c; font-size: 13px; margin-top: 4px;">Espaço de Clareza & Mentoria de Vida</p>
           </div>
 
           <div style="background-color: #ffffff; padding: 32px; border-radius: 20px; border: 1px solid #f5f5f4; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center;">
@@ -252,7 +252,7 @@ export async function sendSubscriptionApprovedNotification({ toEmail, userName, 
 
             <div style="margin: 32px 0;">
               <a href="https://izaque.lynxems.com.br" style="background-color: #0f766e; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 16px; font-weight: 600; font-size: 14px; display: inline-block;">
-                Entrar no Santuário IZAQUE
+                Acessar a Mentoria IZAQUE
               </a>
             </div>
           </div>
