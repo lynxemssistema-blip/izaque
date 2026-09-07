@@ -120,17 +120,23 @@ export async function getAdminAgents(req, res) {
 export async function updateAdminAgent(req, res) {
   try {
     const { id } = req.params;
-    const { system_prompt, temperature, name, is_active } = req.body;
+    const { system_prompt, temperature, name, is_active, starter_questions } = req.body;
+
+    const updatePayload = {
+      system_prompt,
+      temperature,
+      name,
+      is_active,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (starter_questions !== undefined) {
+      updatePayload.starter_questions = starter_questions;
+    }
 
     const { data, error } = await supabaseAdmin
       .from('izaque_agents')
-      .update({
-        system_prompt,
-        temperature,
-        name,
-        is_active,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single();
@@ -146,7 +152,7 @@ export async function updateAdminAgent(req, res) {
 // 7. Criar novo Agente Especialista
 export async function createAdminAgent(req, res) {
   try {
-    const { name, slug, type = 'mindset', system_prompt, temperature = 0.7 } = req.body;
+    const { name, slug, type = 'mindset', system_prompt, temperature = 0.7, starter_questions = [] } = req.body;
 
     if (!name || !system_prompt) {
       return res.status(400).json({ error: 'Nome e System Prompt são obrigatórios.' });
@@ -163,6 +169,7 @@ export async function createAdminAgent(req, res) {
         type: type.toLowerCase(),
         system_prompt: system_prompt.trim(),
         temperature: Number(temperature) || 0.7,
+        starter_questions,
         is_active: true,
       })
       .select()

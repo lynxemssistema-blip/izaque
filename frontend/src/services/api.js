@@ -161,7 +161,7 @@ export async function fetchActiveAgents() {
   try {
     const { data, error } = await supabase
       .from('izaque_agents')
-      .select('id, name, slug, type, temperature, system_prompt, is_active')
+      .select('id, name, slug, type, temperature, system_prompt, is_active, starter_questions')
       .eq('is_active', true)
       .order('created_at', { ascending: true });
 

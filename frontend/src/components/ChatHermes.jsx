@@ -36,9 +36,24 @@ export default function ChatHermes({ userId }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+  const activeAgent = selectedAgentId === 'auto'
+    ? null
+    : activeAgents.find((a) => a.id === selectedAgentId || a.slug === selectedAgentId);
+
+  const currentStarterQuestions = React.useMemo(() => {
+    if (activeAgent) {
+      return Array.isArray(activeAgent.starter_questions) ? activeAgent.starter_questions : [];
+    }
+    const combined = [];
+    (activeAgents || []).forEach((ag) => {
+      if (Array.isArray(ag.starter_questions)) {
+        ag.starter_questions.slice(0, 2).forEach((q) => {
+          combined.push(q);
+        });
+      }
+    });
+    return combined;
+  }, [activeAgent, activeAgents]);
 
   const handleSendMessage = async (e) => {
     e?.preventDefault();
@@ -228,6 +243,25 @@ export default function ChatHermes({ userId }) {
 
       {/* BARRA DE ENTRADA / INPUT */}
       <footer className="p-4 border-t border-neutral-800 bg-neutral-900/80 backdrop-blur-md">
+        {currentStarterQuestions.length > 0 && (
+          <div className="mb-2.5 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {currentStarterQuestions.map((q) => (
+              <button
+                key={q.id || q.text}
+                type="button"
+                onClick={() => setInputText(q.text)}
+                className="shrink-0 text-left px-2.5 py-1 rounded-full bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-700/60 hover:border-indigo-500 text-xs transition flex items-center gap-1.5"
+              >
+                {q.category && (
+                  <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 font-semibold">
+                    {q.category}
+                  </span>
+                )}
+                <span className="truncate max-w-[240px]">{q.text}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
             type="text"

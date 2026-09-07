@@ -31,6 +31,7 @@ import {
   Upload,
   Camera,
   Loader2,
+  Edit3,
 } from 'lucide-react';
 import {
   fetchAdminMetrics,
@@ -79,6 +80,13 @@ export default function AdminDashboard({ currentUser }) {
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentPrompt, setAgentPrompt] = useState('');
   const [agentTemp, setAgentTemp] = useState(0.7);
+  const [agentQuestions, setAgentQuestions] = useState([]);
+  const [newQuestionText, setNewQuestionText] = useState('');
+  const [newQuestionCategory, setNewQuestionCategory] = useState('');
+  const [editingQuestionId, setEditingQuestionId] = useState(null);
+  const [editingQuestionText, setEditingQuestionText] = useState('');
+  const [editingQuestionCategory, setEditingQuestionCategory] = useState('');
+  const [savingQuestions, setSavingQuestions] = useState(false);
 
   // Plano em edição
   const [selectedPlanId, setSelectedPlanId] = useState('pro_monthly');
@@ -128,10 +136,14 @@ export default function AdminDashboard({ currentUser }) {
         setCreatorData(cr);
       }
 
-      if (ag.length > 0 && !selectedAgent) {
-        setSelectedAgent(ag[0]);
-        setAgentPrompt(ag[0].system_prompt);
-        setAgentTemp(Number(ag[0].temperature) || 0.7);
+      if (ag.length > 0) {
+        const targetAgent = selectedAgent
+          ? ag.find((a) => a.id === selectedAgent.id) || ag[0]
+          : ag[0];
+        setSelectedAgent(targetAgent);
+        setAgentPrompt(targetAgent.system_prompt);
+        setAgentTemp(Number(targetAgent.temperature) || 0.7);
+        setAgentQuestions(Array.isArray(targetAgent.starter_questions) ? [...targetAgent.starter_questions] : []);
       }
 
       if (p.length > 0) {
@@ -297,13 +309,82 @@ export default function AdminDashboard({ currentUser }) {
       await updateAgent(selectedAgent.id, {
         system_prompt: agentPrompt,
         temperature: agentTemp,
+        starter_questions: agentQuestions,
       });
-      setFeedbackMsg('Diretrizes do Mentor atualizadas com sucesso!');
+      setFeedbackMsg('Diretrizes e Perguntas do Mentor atualizadas com sucesso!');
       setTimeout(() => setFeedbackMsg(''), 3000);
       loadAllData();
     } catch (err) {
       alert('Erro ao atualizar mentor: ' + err.message);
     }
+  };
+
+  const handleSaveQuestionsOnly = async () => {
+    if (!selectedAgent) return;
+    setSavingQuestions(true);
+    try {
+      await updateAgent(selectedAgent.id, {
+        starter_questions: agentQuestions,
+      });
+      setFeedbackMsg(`Perguntas de condução salvas com sucesso para "${selectedAgent.name}"!`);
+      setTimeout(() => setFeedbackMsg(''), 3500);
+      setAgents((prev) =>
+        prev.map((a) => (a.id === selectedAgent.id ? { ...a, starter_questions: agentQuestions } : a))
+      );
+      setSelectedAgent((prev) => (prev ? { ...prev, starter_questions: agentQuestions } : prev));
+    } catch (err) {
+      alert('Erro ao salvar perguntas: ' + err.message);
+    } finally {
+      setSavingQuestions(false);
+    }
+  };
+
+  const handleAddQuestion = (e) => {
+    e?.preventDefault();
+    if (!newQuestionText.trim()) return;
+    const newQ = {
+      id: 'q_' + Date.now(),
+      text: newQuestionText.trim(),
+      category: newQuestionCategory.trim() || 'Geral',
+    };
+    setAgentQuestions((prev) => [...prev, newQ]);
+    setNewQuestionText('');
+    setNewQuestionCategory('');
+  };
+
+  const handleRemoveQuestion = (qId) => {
+    setAgentQuestions((prev) => prev.filter((q) => q.id !== qId));
+    if (editingQuestionId === qId) {
+      setEditingQuestionId(null);
+      setEditingQuestionText('');
+      setEditingQuestionCategory('');
+    }
+  };
+
+  const handleStartEditQuestion = (q) => {
+    setEditingQuestionId(q.id);
+    setEditingQuestionText(q.text);
+    setEditingQuestionCategory(q.category || '');
+  };
+
+  const handleSaveEditQuestion = () => {
+    if (!editingQuestionText.trim()) return;
+    setAgentQuestions((prev) =>
+      prev.map((q) =>
+        q.id === editingQuestionId
+          ? { ...q, text: editingQuestionText.trim(), category: editingQuestionCategory.trim() || 'Geral' }
+          : q
+      )
+    );
+    setEditingQuestionId(null);
+    setEditingQuestionText('');
+    setEditingQuestionCategory('');
+  };
+
+  const handleCancelEditQuestion = () => {
+    setEditingQuestionId(null);
+    setEditingQuestionText('');
+    setEditingQuestionCategory('');
   };
 
   const filteredUsers = users.filter(
@@ -1354,6 +1435,8 @@ export default function AdminDashboard({ currentUser }) {
                     setSelectedAgent(ag);
                     setAgentPrompt(ag.system_prompt);
                     setAgentTemp(Number(ag.temperature) || 0.7);
+                    setAgentQuestions(Array.isArray(ag.starter_questions) ? [...ag.starter_questions] : []);
+                    setEditingQuestionId(null);
                   }}
                   className={`p-4 rounded-3xl border transition cursor-pointer flex items-center justify-between ${
                     selectedAgent?.id === ag.id
@@ -1439,6 +1522,177 @@ export default function AdminDashboard({ currentUser }) {
                   <span>Salvar Diretrizes</span>
                 </button>
               </form>
+
+              {/* SEÇÃO DE PERGUNTAS PRONTAS DE CONDUÇÃO (STARTER QUESTIONS) */}
+              <div className="p-5 sm:p-6 rounded-3xl bg-stone-50/90 dark:bg-slate-900/90 border border-stone-200 dark:border-slate-700 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-200/80 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-teal-700/10 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 flex items-center justify-center shrink-0">
+                      <HelpCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-serif font-medium text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                        Perguntas Prontas de Condução
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800/40">
+                          {agentQuestions.length} cadastradas
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                        Perguntas de referência pré-configuradas para conduzir a conversa com o usuário. As respostas são salvas na memória permanente.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveQuestionsOnly}
+                    disabled={savingQuestions}
+                    className="self-start sm:self-auto px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-medium text-xs shadow-sm transition flex items-center gap-1.5 shrink-0 active:scale-95 disabled:opacity-50"
+                  >
+                    {savingQuestions ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    <span>Salvar Perguntas</span>
+                  </button>
+                </div>
+
+                {/* FORMULÁRIO DE NOVA PERGUNTA */}
+                <form onSubmit={handleAddQuestion} className="space-y-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+                  <span className="text-xs font-serif font-medium text-stone-700 dark:text-stone-300 block">
+                    Nova Pergunta para {selectedAgent?.name || 'este mentor'}
+                  </span>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={newQuestionText}
+                      onChange={(e) => setNewQuestionText(e.target.value)}
+                      placeholder="Ex: Como identificar e desarmar a fissura quando a vontade vier hoje?"
+                      className="flex-1 px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-900 border border-stone-300 dark:border-slate-700 text-xs text-stone-800 dark:text-stone-100 outline-none focus:border-teal-700"
+                    />
+                    <input
+                      type="text"
+                      value={newQuestionCategory}
+                      onChange={(e) => setNewQuestionCategory(e.target.value)}
+                      placeholder="Categoria (ex: Manejo de Fissura)"
+                      className="w-full sm:w-56 px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-900 border border-stone-300 dark:border-slate-700 text-xs text-stone-800 dark:text-stone-100 outline-none focus:border-teal-700"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newQuestionText.trim()}
+                      className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-black dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-medium transition disabled:opacity-40 flex items-center justify-center gap-1 shrink-0 active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Adicionar</span>
+                    </button>
+                  </div>
+
+                  {/* CHIPS DE SUGESTÃO RÁPIDA DE CATEGORIA */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] text-stone-400 font-serif">Sugestões de temas:</span>
+                    {[
+                      'Manejo de Fissura',
+                      'Prevenção de Recaída',
+                      'Gatilhos Emocionais',
+                      'Rede de Apoio',
+                      'Autossabotagem',
+                      'Crenças Limitantes',
+                      'Ansiedade & Paz',
+                      'Fé & Oração',
+                      'Crença de Escassez',
+                      'Delegação',
+                    ].map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setNewQuestionCategory(cat)}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 dark:bg-slate-700/60 hover:bg-teal-50 dark:hover:bg-teal-950 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-slate-600 hover:border-teal-400 transition"
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </form>
+
+                {/* LISTA DE PERGUNTAS ATUAIS */}
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                  {agentQuestions.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-stone-400 font-serif">
+                      Nenhuma pergunta pronta cadastrada para este mentor. Adicione uma acima para guiar as conversas dos usuários.
+                    </div>
+                  ) : (
+                    agentQuestions.map((q, idx) => (
+                      <div
+                        key={q.id || idx}
+                        className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition hover:border-stone-300 dark:hover:border-slate-600 shadow-2xs"
+                      >
+                        {editingQuestionId === q.id ? (
+                          <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                            <input
+                              type="text"
+                              value={editingQuestionText}
+                              onChange={(e) => setEditingQuestionText(e.target.value)}
+                              className="flex-1 px-3 py-1.5 rounded-xl bg-stone-50 dark:bg-slate-900 border border-stone-300 dark:border-slate-700 text-xs text-stone-800 dark:text-stone-100 outline-none"
+                            />
+                            <input
+                              type="text"
+                              value={editingQuestionCategory}
+                              onChange={(e) => setEditingQuestionCategory(e.target.value)}
+                              className="w-full sm:w-44 px-3 py-1.5 rounded-xl bg-stone-50 dark:bg-slate-900 border border-stone-300 dark:border-slate-700 text-xs text-stone-800 dark:text-stone-100 outline-none"
+                            />
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={handleSaveEditQuestion}
+                                className="px-3 py-1.5 rounded-xl bg-teal-700 text-white text-xs font-medium"
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditQuestion}
+                                className="px-3 py-1.5 rounded-xl bg-stone-200 dark:bg-slate-700 text-stone-700 dark:text-stone-300 text-xs"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800/40 shrink-0 uppercase font-semibold">
+                                {q.category || 'Geral'}
+                              </span>
+                              <p className="text-xs text-stone-800 dark:text-stone-100 font-serif leading-relaxed">
+                                {q.text}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditQuestion(q)}
+                                title="Editar pergunta"
+                                className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-slate-700 transition"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveQuestion(q.id)}
+                                title="Excluir pergunta"
+                                className="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
 
               {/* BASE DE ESTUDOS DO AGENTE */}
               {selectedAgent && (

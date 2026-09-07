@@ -13,26 +13,27 @@ export async function extractAndSaveMemoryAsync(userId, userMessage, assistantRe
   // Dispara a execução sem esperar, garantindo zero impacto na latência do usuário
   setImmediate(async () => {
     try {
-      // Ignora mensagens muito curtas ou triviais (ex: 'ok', 'oi', 'valeu')
-      if (!userMessage || userMessage.trim().length < 12) {
+      // Ignora mensagens extremamente curtas (ex: 'ok', 'oi')
+      if (!userMessage || userMessage.trim().length < 8) {
         return;
       }
 
       const extractionPrompt = `
-Você é um observador psicológico do sistema "IZAQUE".
-Sua tarefa é analisar a fala do usuário e determinar se ele revelou um FATO DE LONGO PRAZO crucial sobre sua mentalidade.
+Você é um observador psicológico sênior e guardião de memória contínua do sistema "IZAQUE".
+Sua missão essencial é analisar a fala do usuário (especialmente quando responde a perguntas de condução dos mentores) e extrair FATOS DURADOUROS, APRENDIZADOS, VIVÊNCIAS E GATILHOS para aprimorar e personalizar permanentemente o conhecimento do agente sobre este usuário.
 
-Critérios para extrair:
-- Bloqueio emocional ou trauma citado
-- Crença limitante (ex: "não consigo cobrar bem", "sempre desisto no final")
-- Padrão de autossabotagem ou procrastinação
-- Relacionamento disfuncional ou gatilho de ansiedade/medo
-- Meta profunda ou compromisso transformacional assumido
+Critérios para extrair e registrar na memória permanente:
+- Respostas a perguntas reflexivas e de condução dos mentores (histórico pessoal, desabafos, rotina)
+- Luta contra vícios, álcool, sobriedade, fissura, dias sóbrio ou gatilhos de recaída
+- Bloqueios emocionais citados, medos (de errar, de cobrar, de expor-se, de ser rejeitado) ou traumas
+- Crenças limitantes sobre merecimento, dinheiro, valor do trabalho ou história familiar
+- Padrões de autossabotagem, procrastinação, fuga ou centralização excessiva
+- Princípios espirituais, fé em Deus, oração ou dúvidas existenciais
+- Metas transformacionais, compromissos assumidos ou vitórias diárias celebradas
 
 NÃO EXTRAIA:
-- Perguntas genéricas ou rotineiras
-- Cumprimentos ou conversas banais
-- Opiniões passageiras sem peso psicológico
+- Apenas saudações sem conteúdo ("olá", "bom dia")
+- Confirmações puramente mecânicas ("ok", "entendi", "valeu")
 
 Entrada do Usuário: "${userMessage}"
 Contexto da Resposta do Mentor: "${assistantReply.slice(0, 300)}"
@@ -40,9 +41,9 @@ Contexto da Resposta do Mentor: "${assistantReply.slice(0, 300)}"
 Retorne EXCLUSIVAMENTE um objeto JSON válido no seguinte formato:
 {
   "shouldStore": true ou false,
-  "category": "blocker" | "belief" | "pattern" | "goal" | "trauma",
-  "content": "Resumo sintético em 1 frase na 3ª pessoa. Ex: 'Possui medo de expor ideias em público por receio de julgamento da família.'",
-  "importanceScore": número de 1 a 5 (5 sendo um bloqueio central gravíssimo)
+  "category": "sobriety" | "blocker" | "belief" | "pattern" | "goal" | "reflection" | "spirituality" | "finance" | "leadership",
+  "content": "Resumo sintético em 1 frase na 3ª pessoa revelando o fato sobre o usuário. Ex: 'Relatou forte gatilho de beber quando chega em casa cansado do trabalho à noite.' ou 'Assumiu o compromisso de se manter 100% sóbrio hoje.' ou 'Possui receio de cobrar o valor justo pelo seu serviço por medo de julgamento.'",
+  "importanceScore": número de 1 a 5 (5 sendo um fato vital sobre a vida, sobriedade ou mentalidade do usuário)
 }
 Se nada relevante foi revelado, retorne apenas: {"shouldStore": false}
 `;

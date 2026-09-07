@@ -11,7 +11,7 @@ export async function getActiveAgents(req, res) {
   try {
     const { data, error } = await supabaseAdmin
       .from('izaque_agents')
-      .select('id, name, slug, type, temperature, system_prompt, is_active')
+      .select('id, name, slug, type, temperature, system_prompt, is_active, starter_questions')
       .eq('is_active', true)
       .order('created_at', { ascending: true });
 
@@ -46,6 +46,27 @@ async function resolveAgent(agentId, userMessage, allAgents, history = []) {
 
   // Heurística rápida de intenção direta para resposta ágil e certeira
   const lowerMsg = (userMessage || '').toLowerCase();
+
+  // 0. Termos de Alcoolismo / Sobriedade / Vício / Fissura / Bebida (Renato)
+  const sobrietyTerms = [
+    'álcool', 'alcool', 'alcoolismo', 'alcoólatra', 'alcoolatra', 'bebida', 'beber',
+    'cerveja', 'cervejinha', 'vinho', 'cachaça', 'cachaca', 'whisky', 'vodka',
+    'ressaca', 'fissura', 'recaída', 'recaida', 'deslize', 'sobriedade', 'sóbrio', 'sobrio',
+    'alcoólicos anônimos', 'alcoolicos anonimos', 'a.a.', 'aa', 'caps ad', 'caps',
+    'parar de beber', 'vontade de beber', 'parando de beber', 'luta contra o álcool'
+  ];
+  const isSobrietyIntent = sobrietyTerms.some(term => {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    return regex.test(lowerMsg);
+  });
+
+  if (isSobrietyIntent) {
+    const sobrietyAgent = allAgents?.find(a => a.slug === 'renato-sobriedade' || a.type === 'sobriedade');
+    if (sobrietyAgent) {
+      console.log(`🧭 [IZAQUE Router] Intenção de sobriedade/alcoolismo detectada -> Direcionado para: "${sobrietyAgent.name}"`);
+      return sobrietyAgent;
+    }
+  }
 
   // 1. Termos Bíblicos / Fé / Deus / Espiritualidade (Pastor João)
   const biblicalTerms = [
@@ -116,12 +137,13 @@ Sua função é analisar a mensagem do usuário e o contexto da conversa para de
 
 ESPECIALISTAS DA MENTORIA:
 ${allAgents.map(a => `- ID: ${a.id} | Slug: ${a.slug} | Nome: ${a.name} | Especialidade: ${a.type}
-  Foco: ${a.slug === 'pastor-joao-biblico' ? 'Bíblia Sagrada (JFA), fé em Deus, oração, versículos, angústia espiritual, colocando Deus sempre em primeiro lugar.' : a.slug === 'mentor-financeiro' ? 'Mentalidade financeira, crenças de escassez, culpa com dinheiro, precificação e prosperidade.' : a.slug === 'mentora-lideranca' ? 'Liderança, delegação, cura da centralização e medo de confiar na equipe.' : 'Reprogramação de mentalidade geral, autossabotagem, desabafos emocionais e acolhimento amplo.'}`).join('\n')}
+  Foco: ${a.slug === 'renato-sobriedade' ? 'Recuperação do alcoolismo, superação de fissura, prevenção de recaída, acolhimento compassivo de ex-alcoólatra e suporte de instituições (A.A., CAPS ad, CVV 188).' : a.slug === 'pastor-joao-biblico' ? 'Bíblia Sagrada (JFA), fé em Deus, oração, versículos, angústia espiritual, colocando Deus sempre em primeiro lugar.' : a.slug === 'mentor-financeiro' ? 'Mentalidade financeira, crenças de escassez, culpa com dinheiro, precificação e prosperidade.' : a.slug === 'mentora-lideranca' ? 'Liderança, delegação, cura da centralização e medo de confiar na equipe.' : 'Reprogramação de mentalidade geral, autossabotagem, desabafos emocionais e acolhimento amplo.'}`).join('\n')}
 
 ${recentTurns ? `HISTÓRICO RECENTE:\n${recentTurns}\n` : ''}
 MENSAGEM DO USUÁRIO: "${userMessage}"
 
 DIRETRIZES:
+- Se envolver álcool, alcoolismo, bebida, fissura, recaída, sobriedade, A.A., CAPS ad: selecione o especialista em sobriedade (${allAgents.find(a => a.slug === 'renato-sobriedade')?.id || 'renato-sobriedade'}).
 - Se envolver fé, Deus, versículos bíblicos, oração, desânimo da alma: selecione o especialista bíblico (${allAgents.find(a => a.slug === 'pastor-joao-biblico')?.id || 'pastor-joao-biblico'}).
 - Se envolver dinheiro, preços, culpa por ter dinheiro ou lucro: selecione o especialista financeiro.
 - Se envolver delegar, controle, desconfiança de equipe: selecione a especialista de liderança.

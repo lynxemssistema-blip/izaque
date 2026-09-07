@@ -156,6 +156,47 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
+  // Agentes Especialistas e Perguntas Prontas de Condução
+  const [activeAgents, setActiveAgents] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState('auto');
+
+  useEffect(() => {
+    fetchActiveAgents().then((list) => {
+      if (Array.isArray(list) && list.length > 0) {
+        setActiveAgents(list);
+      }
+    });
+  }, []);
+
+  const activeAgent = selectedAgentId === 'auto'
+    ? null
+    : activeAgents.find((a) => a.id === selectedAgentId || a.slug === selectedAgentId);
+
+  const currentStarterQuestions = React.useMemo(() => {
+    if (activeAgent) {
+      return Array.isArray(activeAgent.starter_questions) ? activeAgent.starter_questions : [];
+    }
+    const combined = [];
+    (activeAgents || []).forEach((ag) => {
+      if (Array.isArray(ag.starter_questions)) {
+        ag.starter_questions.slice(0, 2).forEach((q) => {
+          combined.push({
+            ...q,
+            agentName: ag.name,
+            agentId: ag.id,
+          });
+        });
+      }
+    });
+    return combined;
+  }, [activeAgent, activeAgents]);
+
+  const handleSelectStarterQuestion = (questionText) => {
+    if (!questionText || isReflecting) return;
+    setInputVal('');
+    handleSendReflection(null, questionText);
+  };
+
   // Estado e Controle Rápido do Som Ambiente Terapêutico
   const [isAmbientActive, setIsAmbientActive] = useState(() => {
     return localStorage.getItem('izaque_ambient_enabled') === 'true';
@@ -471,9 +512,9 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
   };
 
   // Enviar Reflexão Escrita
-  const handleSendReflection = async (e) => {
+  const handleSendReflection = async (e, directText = null) => {
     e?.preventDefault();
-    const text = inputVal.trim();
+    const text = (directText !== null ? directText : inputVal).trim();
     if (!text || isReflecting) return;
 
     const userEntry = {
@@ -484,7 +525,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     };
 
     setReflections((prev) => [...prev, userEntry]);
-    setInputVal('');
+    if (directText === null) setInputVal('');
     setIsReflecting(true);
 
     try {
@@ -498,7 +539,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       const res = await sendChatMessage({
         message: text,
         userId: user?.id || 'default_user_guest',
-        agentId: 'auto',
+        agentId: selectedAgentId,
         history,
       });
 
@@ -640,7 +681,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         audioBase64,
         mimeType,
         userId: user?.id || 'default_user_guest',
-        agentId: 'auto',
+        agentId: selectedAgentId,
         durationSeconds,
         history,
       });
@@ -767,6 +808,50 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
           </button>
         </div>
       </header>
+
+      {/* SELETOR DE MENTOR / ESPECIALISTA */}
+      <div className="px-3 sm:px-6 py-2 bg-white/60 dark:bg-slate-900/60 border-b border-stone-200/70 dark:border-slate-800/70 backdrop-blur-md flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar shrink-0">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-stone-400 dark:text-stone-500 shrink-0 mr-1 hidden sm:inline">
+          Mentor:
+        </span>
+        <button
+          type="button"
+          onClick={() => setSelectedAgentId('auto')}
+          className={`px-3 py-1 rounded-full text-xs font-serif transition-all flex items-center gap-1.5 border shrink-0 active:scale-95 ${
+            selectedAgentId === 'auto'
+              ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
+              : 'bg-stone-100/90 dark:bg-slate-800/80 text-stone-600 dark:text-stone-300 border-stone-200/80 dark:border-slate-700 hover:border-teal-500'
+          }`}
+        >
+          <span>🧠</span>
+          <span>Orquestrador IZAQUE</span>
+        </button>
+        {activeAgents.map((ag) => (
+          <button
+            key={ag.id}
+            type="button"
+            onClick={() => setSelectedAgentId(ag.id)}
+            className={`px-3 py-1 rounded-full text-xs font-serif transition-all flex items-center gap-1.5 border shrink-0 active:scale-95 ${
+              selectedAgentId === ag.id
+                ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
+                : 'bg-stone-100/90 dark:bg-slate-800/80 text-stone-600 dark:text-stone-300 border-stone-200/80 dark:border-slate-700 hover:border-teal-500'
+            }`}
+          >
+            <span>
+              {ag.slug === 'renato-sobriedade'
+                ? '🕊️'
+                : ag.slug === 'pastor-joao-biblico'
+                ? '📖'
+                : ag.slug === 'mentor-financeiro'
+                ? '💎'
+                : ag.slug === 'mentora-lideranca'
+                ? '⚡'
+                : '🏛️'}
+            </span>
+            <span>{ag.name}</span>
+          </button>
+        ))}
+      </div>
 
       {/* SAUDAÇÃO CONTEXTUAL */}
       <div className="px-4 sm:px-6 py-2 bg-stone-100/70 dark:bg-slate-800/40 border-b border-stone-200/60 dark:border-slate-800/60 text-xs text-stone-600 dark:text-stone-300 flex items-center gap-2 shrink-0">
@@ -909,6 +994,39 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
 
       {/* FOOTER DE ENTRADA RESPONSIVO */}
       <footer className="p-2 sm:p-3.5 pb-safe border-t border-stone-200/80 dark:border-slate-800 bg-stone-50/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
+        {/* PERGUNTAS PRONTAS DE CONDUÇÃO DO MENTOR */}
+        {!isRecording && currentStarterQuestions.length > 0 && (
+          <div className="mb-2 px-1">
+            <div className="flex items-center justify-between mb-1.5 px-0.5">
+              <span className="text-[11px] font-serif text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                <span className="font-medium">
+                  {activeAgent ? `Perguntas sugeridas por ${activeAgent.name}` : 'Perguntas sugeridas para conduzir sua reflexão'}:
+                </span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
+              {currentStarterQuestions.map((q) => (
+                <button
+                  key={q.id || q.text}
+                  type="button"
+                  onClick={() => handleSelectStarterQuestion(q.text)}
+                  disabled={isReflecting}
+                  title={`Conduzir: "${q.text}"`}
+                  className="shrink-0 text-left px-3 py-1.5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/60 text-stone-700 dark:text-stone-200 border border-stone-200/90 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-600 text-xs font-serif transition-all shadow-2xs hover:shadow-xs active:scale-95 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  {q.category && (
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-teal-50 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 font-semibold border border-teal-200/60 dark:border-teal-800/40 shrink-0">
+                      {q.category}
+                    </span>
+                  )}
+                  <span className="truncate max-w-[240px] sm:max-w-md">{q.text}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isRecording ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
