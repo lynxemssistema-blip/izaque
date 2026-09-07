@@ -1,9 +1,9 @@
 {
-  "name": "santuario-izaque",
+  "name": "mentoria-izaque",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Santuário IZAQUE - Orquestrador Hermes & Frontend Vite",
+  "description": "Mentoria IZAQUE - Orquestrador Hermes & Frontend Vite",
   "scripts": {
     "dev": "node start-dev.js",
     "dev:all": "node start-dev.js",
