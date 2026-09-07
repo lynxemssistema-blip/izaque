@@ -516,12 +516,12 @@ export default function AdminDashboard({ currentUser }) {
           </div>
         </div>
 
-        {/* NAVEGAÇÃO DE ABAS */}
-        <div className="flex overflow-x-auto pb-1 max-w-full -mx-2 px-2 sm:mx-0 sm:px-0 no-scrollbar">
-          <div className="inline-flex p-1.5 rounded-2xl bg-stone-200/60 dark:bg-slate-800/60 border border-stone-300/50 dark:border-slate-700/50 text-xs font-medium whitespace-nowrap shrink-0 gap-1">
+        {/* NAVEGAÇÃO DE ABAS COM QUEBRA DE LINHA RESPONSIVA */}
+        <div className="w-full">
+          <div className="flex flex-wrap items-center p-1.5 rounded-2xl bg-stone-200/60 dark:bg-slate-800/60 border border-stone-300/50 dark:border-slate-700/50 text-xs font-medium gap-1.5 w-full">
             <button
               onClick={() => setActiveTab('users')}
-              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'users'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
@@ -533,7 +533,7 @@ export default function AdminDashboard({ currentUser }) {
 
             <button
               onClick={() => setActiveTab('plans')}
-              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'plans'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
@@ -545,7 +545,7 @@ export default function AdminDashboard({ currentUser }) {
 
             <button
               onClick={() => setActiveTab('subscriptions')}
-              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'subscriptions'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
@@ -557,7 +557,7 @@ export default function AdminDashboard({ currentUser }) {
 
             <button
               onClick={() => setActiveTab('feedbacks')}
-              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'feedbacks'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
@@ -569,7 +569,7 @@ export default function AdminDashboard({ currentUser }) {
 
             <button
               onClick={() => setActiveTab('creator')}
-              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'creator'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
@@ -581,7 +581,7 @@ export default function AdminDashboard({ currentUser }) {
 
             <button
               onClick={() => setActiveTab('memories')}
-              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'memories'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
@@ -593,7 +593,7 @@ export default function AdminDashboard({ currentUser }) {
 
             <button
               onClick={() => setActiveTab('agents')}
-              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'agents'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
@@ -605,7 +605,7 @@ export default function AdminDashboard({ currentUser }) {
 
             <button
               onClick={() => setActiveTab('help')}
-              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'help'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
