@@ -262,6 +262,7 @@ export default function App() {
           onLogout={handleLogout}
           onOpenOnboarding={() => setShowOnboarding(true)}
           onOpenProfile={() => setIsProfileOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenFeedback={() => setIsFeedbackOpen(true)}
         />
       </div>

@@ -767,7 +767,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
   };
 
   return (
-    <div className="flex flex-col h-full flex-1 w-full max-w-4xl mx-auto bg-stone-50 dark:bg-slate-900 sm:border-x border-stone-200/80 dark:border-slate-800 transition-colors duration-300 font-sans text-stone-800 dark:text-stone-100 overflow-hidden">
+    <div className="flex flex-col h-full flex-1 w-full max-w-5xl mx-auto bg-stone-50 dark:bg-slate-900 sm:border-x border-stone-200/80 dark:border-slate-800 transition-colors duration-300 font-sans text-stone-800 dark:text-stone-100 overflow-hidden">
       {/* MODAL DE CONFIGURAÇÕES DE USUÁRIO */}
       <UserSettingsModal
         isOpen={isSettingsOpen}
@@ -784,7 +784,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
               type="button"
               onClick={onBackToHome}
               title="Voltar para o Início"
-              className="md:hidden p-2 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 rounded-xl hover:bg-stone-200/50 dark:hover:bg-slate-800 transition min-w-[40px] min-h-[40px] flex items-center justify-center shrink-0 active:scale-95"
+              className="p-2 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 rounded-xl hover:bg-stone-200/50 dark:hover:bg-slate-800 transition min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -961,7 +961,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
               className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[92%] sm:max-w-xl p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl transition-all shadow-sm ${
+                className={`max-w-[92%] sm:max-w-2xl lg:max-w-3xl xl:max-w-4xl p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl transition-all shadow-sm ${
                   isUser
                     ? 'bg-teal-700 text-white rounded-tr-sm'
                     : 'bg-white dark:bg-slate-800 text-stone-800 dark:text-stone-100 border border-stone-200/80 dark:border-slate-700/70 rounded-tl-sm'
