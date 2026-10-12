@@ -743,5 +743,33 @@ export async function updateAdminCreator(creatorData) {
   return data;
 }
 
+/**
+ * Consulta conversas direcionadas ativas para os usuários do sistema
+ */
+export async function fetchPublicGuidedConversations() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/guided-conversations`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch (err) {
+    console.warn('Aviso ao buscar conversas direcionadas via backend:', err);
+  }
 
+  // Fallback Supabase
+  try {
+    const { data, error } = await supabase
+      .from('izaque_guided_conversations')
+      .select('*')
+      .eq('is_active', true)
+      .order('order_index', { ascending: true })
+      .order('created_at', { ascending: false });
 
+    if (!error && data) return data;
+  } catch (err) {
+    console.error('Erro no fallback de conversas direcionadas Supabase:', err);
+  }
+
+  return [];
+}

@@ -24,9 +24,17 @@ import {
   generateBroadcastDraftController,
   getBroadcastStatsController,
   sendBroadcastMessageController,
+  getPublicGuidedConversations,
+  getAdminGuidedConversations,
+  createAdminGuidedConversation,
+  updateAdminGuidedConversation,
+  deleteAdminGuidedConversation,
 } from '../controllers/adminController.js';
 
 const router = Router();
+
+// Conversas Direcionadas Públicas (para todos os usuários)
+router.get('/guided-conversations', getPublicGuidedConversations);
 
 router.get('/admin/metrics', getAdminMetrics);
 router.get('/admin/users', getAdminUsers);
@@ -61,5 +69,12 @@ router.post('/admin/broadcast/draft', generateBroadcastDraftController);
 router.get('/admin/broadcast/stats', getBroadcastStatsController);
 router.post('/admin/broadcast/send', sendBroadcastMessageController);
 
+// Gestão de Conversas Direcionadas & Roteiro de Perguntas (Superadmin)
+router.get('/admin/guided-conversations', getAdminGuidedConversations);
+router.post('/admin/guided-conversations', createAdminGuidedConversation);
+router.put('/admin/guided-conversations/:id', updateAdminGuidedConversation);
+router.delete('/admin/guided-conversations/:id', deleteAdminGuidedConversation);
+
 export default router;
+
 

@@ -497,6 +497,97 @@ export async function sendBroadcastEmail({ subject, htmlContent, targetAudience 
   return data;
 }
 
+/**
+ * Gestão de Conversas Direcionadas (Superadmin)
+ */
+export async function fetchAdminGuidedConversations() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/guided-conversations`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
 
+  // Fallback direto ao Supabase
+  try {
+    const { data, error } = await supabase
+      .from('izaque_guided_conversations')
+      .select('*')
+      .order('order_index', { ascending: true })
+      .order('created_at', { ascending: false });
 
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Erro no fallback de conversas direcionadas admin:', err);
+    return [];
+  }
+}
 
+export async function createAdminGuidedConversation(payload) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/guided-conversations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  // Fallback Supabase
+  const { data, error } = await supabase
+    .from('izaque_guided_conversations')
+    .insert([payload])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateAdminGuidedConversation(id, payload) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/guided-conversations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  // Fallback Supabase
+  const { data, error } = await supabase
+    .from('izaque_guided_conversations')
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteAdminGuidedConversation(id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/guided-conversations/${id}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) return true;
+  } catch {}
+
+  // Fallback Supabase
+  const { error } = await supabase
+    .from('izaque_guided_conversations')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+  return true;
+}

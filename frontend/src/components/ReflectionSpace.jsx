@@ -32,6 +32,9 @@ import {
   ListPlus,
   History,
   Clock,
+  Compass,
+  ChevronRight,
+  HelpCircle,
 } from 'lucide-react';
 import {
   sendChatMessage,
@@ -46,6 +49,7 @@ import {
   createUserSession,
   updateUserSession,
   deleteUserSession,
+  fetchPublicGuidedConversations,
 } from '../services/api';
 import { ambientAudio } from '../services/ambientAudioService';
 import { humanVoiceService } from '../services/voiceService';
@@ -304,6 +308,10 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
   const [editingTitleText, setEditingTitleText] = useState('');
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
+  // Conversas Direcionadas Criadas pelo Superadmin
+  const [guidedConversations, setGuidedConversations] = useState([]);
+  const [activeGuidedTopic, setActiveGuidedTopic] = useState(null);
+
   // Carregar sessões e histórico persistente do banco de dados (Supabase izaque_chat_sessions & izaque_messages)
   useEffect(() => {
     if (!user?.id) {
@@ -357,6 +365,15 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
 
     initSessionsAndHistory();
 
+    // Carregar conversas direcionadas criadas pelo Superadmin
+    fetchPublicGuidedConversations()
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setGuidedConversations(data);
+        }
+      })
+      .catch((err) => console.warn('Aviso ao buscar conversas direcionadas:', err));
+
     return () => {
       isMounted = false;
     };
@@ -373,6 +390,10 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       setActiveSessionId(sessionId);
       localStorage.setItem('izaque_active_session_id', sessionId);
       setIsSessionsDrawerOpen(false);
+
+      const sessionObj = sessions.find((s) => s.id === sessionId);
+      const matchedGuided = guidedConversations.find((g) => g.title === sessionObj?.title);
+      setActiveGuidedTopic(matchedGuided || null);
 
       const historyData = await fetchChatHistory(user.id, sessionId);
       if (historyData && historyData.length > 0) {
@@ -420,6 +441,53 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       }
     } catch (err) {
       console.error('Erro ao criar sessão:', err);
+    } finally {
+      setIsCreatingSession(false);
+    }
+  };
+
+  const handleStartGuidedSession = async (guided) => {
+    if (isCreatingSession) return;
+    setIsCreatingSession(true);
+
+    try {
+      setIsSessionsDrawerOpen(false);
+
+      if (guided.agent_slug && activeAgents.length > 0) {
+        const targetAgent = activeAgents.find((a) => a.slug === guided.agent_slug);
+        if (targetAgent) {
+          setSelectedAgentId(targetAgent.id);
+          setGuideName(targetAgent.name);
+        }
+      }
+
+      let newSessionId = null;
+      if (user?.id) {
+        const newSess = await createUserSession(user.id, guided.title);
+        if (newSess) {
+          newSessionId = newSess.id;
+          setSessions((prev) => [newSess, ...prev]);
+        }
+      }
+
+      setActiveSessionId(newSessionId);
+      if (newSessionId) {
+        localStorage.setItem('izaque_active_session_id', newSessionId);
+      }
+      setActiveGuidedTopic(guided);
+
+      setReflections([
+        {
+          id: 'initial',
+          role: 'guide',
+          content: `Olá... Seja muito bem-vindo(a) a esta conversa direcionada sobre "${guided.title}".\n\n${guided.description || 'Este é um espaço seguro e focado para reflexão.'}\n\nVocê pode tocar em uma das perguntas do tema preparadas logo abaixo ou desabafar sobre o que estiver no seu coração agora.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          memoriesRecalled: 0,
+          knowledgeApplied: 0,
+        },
+      ]);
+    } catch (err) {
+      console.error('Erro ao iniciar conversa direcionada:', err);
     } finally {
       setIsCreatingSession(false);
     }
@@ -1041,12 +1109,59 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
                 </button>
               </div>
 
-              {/* Lista Cronológica de Sessões */}
-              <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
-                <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400 flex items-center justify-between">
-                  <span>Histórico de Tópicos</span>
-                  <span>{sessions.length} {sessions.length === 1 ? 'conversa' : 'conversas'}</span>
-                </div>
+              {/* Lista de Sessões e Conversas Direcionadas */}
+              <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">
+                {/* SEÇÃO: CONVERSAS DIRECIONADAS DO SISTEMA */}
+                {guidedConversations.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5" />
+                      <span>Conversas Direcionadas ({guidedConversations.length})</span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {guidedConversations.map((g) => {
+                        const isCurrent = sessions.find((s) => s.id === activeSessionId)?.title === g.title;
+                        const questionsCount = Array.isArray(g.questions) ? g.questions.length : 0;
+
+                        return (
+                          <div
+                            key={g.id}
+                            onClick={() => handleStartGuidedSession(g)}
+                            className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
+                              isCurrent
+                                ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-400 dark:border-teal-700 shadow-xs'
+                                : 'bg-white dark:bg-slate-800/70 border-stone-200/80 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-800 hover:bg-teal-50/40'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-[9px] uppercase font-bold text-teal-700 dark:text-teal-400 px-1.5 py-0.2 bg-teal-100/70 dark:bg-teal-900/50 rounded-md">
+                                  {g.category || 'Geral'}
+                                </span>
+                                <span className="text-[10px] text-stone-400">
+                                  {questionsCount} {questionsCount === 1 ? 'pergunta' : 'perguntas'}
+                                </span>
+                              </div>
+                              <h4 className="text-xs font-serif font-medium text-stone-900 dark:text-stone-100 truncate">
+                                {g.title}
+                              </h4>
+                            </div>
+
+                            <ChevronRight className="w-4 h-4 text-stone-400 shrink-0" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* SEÇÃO: HISTÓRICO DE TÓPICOS DO USUÁRIO */}
+                <div className="space-y-2">
+                  <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400 flex items-center justify-between">
+                    <span>Suas Conversas</span>
+                    <span>{sessions.length} {sessions.length === 1 ? 'tópico' : 'tópicos'}</span>
+                  </div>
 
                 {sessions.map((sess) => {
                   const isActive = sess.id === activeSessionId;
@@ -1145,6 +1260,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
                     </div>
                   );
                 })}
+                </div>
               </div>
             </motion.div>
           </div>

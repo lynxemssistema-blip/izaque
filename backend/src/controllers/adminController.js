@@ -760,5 +760,161 @@ export async function sendBroadcastMessageController(req, res) {
   }
 }
 
+/**
+ * 26. Listar conversas direcionadas ativas para os usuários
+ * GET /api/guided-conversations
+ */
+export async function getPublicGuidedConversations(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_guided_conversations')
+      .select('*')
+      .eq('is_active', true)
+      .order('order_index', { ascending: true })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar conversas direcionadas públicas:', error);
+    res.status(500).json({ error: 'Erro ao carregar conversas direcionadas.' });
+  }
+}
+
+/**
+ * 27. Listar todas as conversas direcionadas para administração (Superadmin)
+ * GET /api/admin/guided-conversations
+ */
+export async function getAdminGuidedConversations(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_guided_conversations')
+      .select('*')
+      .order('order_index', { ascending: true })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar conversas direcionadas admin:', error);
+    res.status(500).json({ error: 'Erro ao carregar conversas direcionadas para administração.' });
+  }
+}
+
+/**
+ * 28. Criar nova conversa direcionada com perguntas (Superadmin)
+ * POST /api/admin/guided-conversations
+ */
+export async function createAdminGuidedConversation(req, res) {
+  try {
+    const {
+      title,
+      description,
+      category = 'Geral',
+      icon = 'Compass',
+      agent_slug = 'izaque-master',
+      questions = [],
+      is_active = true,
+      order_index = 0,
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'O título da conversa direcionada é obrigatório.' });
+    }
+
+    const payload = {
+      title: title.trim(),
+      description: description ? description.trim() : '',
+      category: category ? category.trim() : 'Geral',
+      icon: icon ? icon.trim() : 'Compass',
+      agent_slug: agent_slug ? agent_slug.trim() : 'izaque-master',
+      questions: Array.isArray(questions) ? questions : [],
+      is_active: is_active !== undefined ? Boolean(is_active) : true,
+      order_index: Number(order_index) || 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_guided_conversations')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao criar conversa direcionada:', error);
+    res.status(500).json({ error: 'Erro ao criar conversa direcionada: ' + error.message });
+  }
+}
+
+/**
+ * 29. Atualizar conversa direcionada e perguntas (Superadmin)
+ * PUT /api/admin/guided-conversations/:id
+ */
+export async function updateAdminGuidedConversation(req, res) {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      description,
+      category,
+      icon,
+      agent_slug,
+      questions,
+      is_active,
+      order_index,
+    } = req.body;
+
+    const updates = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (title !== undefined) updates.title = title.trim();
+    if (description !== undefined) updates.description = description.trim();
+    if (category !== undefined) updates.category = category.trim();
+    if (icon !== undefined) updates.icon = icon.trim();
+    if (agent_slug !== undefined) updates.agent_slug = agent_slug.trim();
+    if (questions !== undefined) updates.questions = Array.isArray(questions) ? questions : [];
+    if (is_active !== undefined) updates.is_active = Boolean(is_active);
+    if (order_index !== undefined) updates.order_index = Number(order_index) || 0;
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_guided_conversations')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar conversa direcionada:', error);
+    res.status(500).json({ error: 'Erro ao atualizar conversa direcionada: ' + error.message });
+  }
+}
+
+/**
+ * 30. Excluir conversa direcionada (Superadmin)
+ * DELETE /api/admin/guided-conversations/:id
+ */
+export async function deleteAdminGuidedConversation(req, res) {
+  try {
+    const { id } = req.params;
+    const { error } = await supabaseAdmin
+      .from('izaque_guided_conversations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.status(200).json({ success: true, message: 'Conversa direcionada removida com sucesso.' });
+  } catch (error) {
+    console.error('❌ Erro ao excluir conversa direcionada:', error);
+    res.status(500).json({ error: 'Erro ao excluir conversa direcionada: ' + error.message });
+  }
+}
+
+
 
 
