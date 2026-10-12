@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Feather, Shield, Wind, LogOut, Heart, Home, Edit3, Sparkles, LifeBuoy, Sliders, Palette } from 'lucide-react';
 import { THEMES, saveAppTheme, getCurrentTheme } from '../services/themeService';
 import { updateUserProfile } from '../services/api';
+import UserNotificationsPopover from './UserNotificationsPopover';
 
 export default function Navbar({
   user,
@@ -212,7 +213,10 @@ export default function Navbar({
           )}
 
           {user ? (
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              {/* Notificações & Mural de Comunicados (Áudio e Texto) */}
+              <UserNotificationsPopover user={user} />
+
               {/* Botão de Suporte Oficial Lynx (Sugestões & Reclamações) */}
               <button
                 type="button"

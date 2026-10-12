@@ -29,6 +29,18 @@ import {
   createAdminGuidedConversation,
   updateAdminGuidedConversation,
   deleteAdminGuidedConversation,
+  getAdminUserGroups,
+  createAdminUserGroup,
+  updateAdminUserGroup,
+  deleteAdminUserGroup,
+  getAdminGroupMembers,
+  getUserAssignedGroups,
+  setUserAssignedGroups,
+  sendGroupBroadcast,
+  getAdminGroupBroadcasts,
+  getUserNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
 } from '../controllers/adminController.js';
 
 const router = Router();
@@ -75,6 +87,25 @@ router.post('/admin/guided-conversations', createAdminGuidedConversation);
 router.put('/admin/guided-conversations/:id', updateAdminGuidedConversation);
 router.delete('/admin/guided-conversations/:id', deleteAdminGuidedConversation);
 
+// Gestão de Grupos de Usuários & Classificação N:N (Superadmin)
+router.get('/admin/user-groups', getAdminUserGroups);
+router.post('/admin/user-groups', createAdminUserGroup);
+router.put('/admin/user-groups/:id', updateAdminUserGroup);
+router.delete('/admin/user-groups/:id', deleteAdminUserGroup);
+router.get('/admin/user-groups/:id/members', getAdminGroupMembers);
+router.get('/admin/users/:userId/groups', getUserAssignedGroups);
+router.post('/admin/users/:userId/groups', setUserAssignedGroups);
+
+// Disparos de Texto e Áudio por Grupo (Superadmin)
+router.post('/admin/group-broadcasts', sendGroupBroadcast);
+router.get('/admin/group-broadcasts', getAdminGroupBroadcasts);
+
+// Notificações / Comunicados In-App do Usuário
+router.get('/user/notifications/:userId', getUserNotifications);
+router.patch('/user/notifications/:id/read', markNotificationAsRead);
+router.patch('/user/notifications/read-all/:userId', markAllNotificationsAsRead);
+
 export default router;
+
 
 

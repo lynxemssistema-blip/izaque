@@ -915,6 +915,379 @@ export async function deleteAdminGuidedConversation(req, res) {
   }
 }
 
+/**
+ * 31. Listar Grupos de Usuários com contagem de membros (Superadmin)
+ * GET /api/admin/user-groups
+ */
+export async function getAdminUserGroups(req, res) {
+  try {
+    const { data: groups, error: groupsError } = await supabaseAdmin
+      .from('izaque_user_groups')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (groupsError) throw groupsError;
+
+    // Buscar membros para calcular contagem por grupo
+    const { data: members, error: membersError } = await supabaseAdmin
+      .from('izaque_user_group_members')
+      .select('group_id, user_id');
+
+    if (membersError) throw membersError;
+
+    const countMap = {};
+    (members || []).forEach((m) => {
+      countMap[m.group_id] = (countMap[m.group_id] || 0) + 1;
+    });
+
+    const enriched = (groups || []).map((g) => ({
+      ...g,
+      member_count: countMap[g.id] || 0,
+    }));
+
+    res.status(200).json(enriched);
+  } catch (error) {
+    console.error('❌ Erro ao listar grupos de usuários:', error);
+    res.status(500).json({ error: 'Erro ao carregar grupos de usuários.' });
+  }
+}
+
+/**
+ * 32. Criar novo Grupo de Usuários (Superadmin)
+ * POST /api/admin/user-groups
+ */
+export async function createAdminUserGroup(req, res) {
+  try {
+    const { name, description = '', color = '#0f766e' } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'O nome do grupo é obrigatório.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_user_groups')
+      .insert({
+        name: name.trim(),
+        description: description ? description.trim() : '',
+        color: color ? color.trim() : '#0f766e',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({ ...data, member_count: 0 });
+  } catch (error) {
+    console.error('❌ Erro ao criar grupo de usuários:', error);
+    res.status(500).json({ error: 'Erro ao criar grupo: ' + error.message });
+  }
+}
+
+/**
+ * 33. Atualizar Grupo de Usuários (Superadmin)
+ * PUT /api/admin/user-groups/:id
+ */
+export async function updateAdminUserGroup(req, res) {
+  try {
+    const { id } = req.params;
+    const { name, description, color } = req.body;
+
+    const updates = { updated_at: new Date().toISOString() };
+    if (name !== undefined) updates.name = name.trim();
+    if (description !== undefined) updates.description = description.trim();
+    if (color !== undefined) updates.color = color.trim();
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_user_groups')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar grupo de usuários:', error);
+    res.status(500).json({ error: 'Erro ao atualizar grupo: ' + error.message });
+  }
+}
+
+/**
+ * 34. Excluir Grupo de Usuários (Superadmin)
+ * DELETE /api/admin/user-groups/:id
+ */
+export async function deleteAdminUserGroup(req, res) {
+  try {
+    const { id } = req.params;
+    const { error } = await supabaseAdmin
+      .from('izaque_user_groups')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.status(200).json({ success: true, message: 'Grupo excluído com sucesso.' });
+  } catch (error) {
+    console.error('❌ Erro ao excluir grupo:', error);
+    res.status(500).json({ error: 'Erro ao excluir grupo: ' + error.message });
+  }
+}
+
+/**
+ * 35. Listar Membros de um Grupo (Superadmin)
+ * GET /api/admin/user-groups/:id/members
+ */
+export async function getAdminGroupMembers(req, res) {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabaseAdmin
+      .from('izaque_user_group_members')
+      .select('user_id, created_at')
+      .eq('group_id', id);
+
+    if (error) throw error;
+
+    const userIds = (data || []).map((m) => m.user_id);
+    if (userIds.length === 0) return res.status(200).json([]);
+
+    const { data: profiles, error: profError } = await supabaseAdmin
+      .from('izaque_profiles')
+      .select('id, full_name, email, avatar_url, role, plan_status')
+      .in('id', userIds);
+
+    if (profError) throw profError;
+    res.status(200).json(profiles || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar membros do grupo:', error);
+    res.status(500).json({ error: 'Erro ao carregar membros do grupo.' });
+  }
+}
+
+/**
+ * 36. Consultar grupos de um usuário específico (Superadmin)
+ * GET /api/admin/users/:userId/groups
+ */
+export async function getUserAssignedGroups(req, res) {
+  try {
+    const { userId } = req.params;
+    const { data, error } = await supabaseAdmin
+      .from('izaque_user_group_members')
+      .select('group_id')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    const groupIds = (data || []).map((row) => row.group_id);
+    res.status(200).json(groupIds);
+  } catch (error) {
+    console.error('❌ Erro ao buscar grupos do usuário:', error);
+    res.status(500).json({ error: 'Erro ao buscar grupos do usuário.' });
+  }
+}
+
+/**
+ * 37. Atualizar grupos atribuídos a um usuário (Classificação de Usuário em múltiplos grupos)
+ * POST /api/admin/users/:userId/groups
+ */
+export async function setUserAssignedGroups(req, res) {
+  try {
+    const { userId } = req.params;
+    const { groupIds = [] } = req.body;
+
+    // 1. Remove memberships anteriores
+    await supabaseAdmin
+      .from('izaque_user_group_members')
+      .delete()
+      .eq('user_id', userId);
+
+    // 2. Insere as novas memberships se houver
+    if (Array.isArray(groupIds) && groupIds.length > 0) {
+      const inserts = groupIds.map((gId) => ({
+        group_id: gId,
+        user_id: userId,
+      }));
+
+      const { error: insertError } = await supabaseAdmin
+        .from('izaque_user_group_members')
+        .insert(inserts);
+
+      if (insertError) throw insertError;
+    }
+
+    res.status(200).json({ success: true, groupIds });
+  } catch (error) {
+    console.error('❌ Erro ao atualizar grupos do usuário:', error);
+    res.status(500).json({ error: 'Erro ao salvar grupos do usuário: ' + error.message });
+  }
+}
+
+/**
+ * 38. Disparar Mensagem ou Áudio para um ou mais Grupos com deduplicação
+ * POST /api/admin/group-broadcasts
+ */
+export async function sendGroupBroadcast(req, res) {
+  try {
+    const {
+      title,
+      content = '',
+      audio_url = null,
+      target_group_ids = [],
+      sender_id = null,
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'O título do comunicado é obrigatório.' });
+    }
+
+    if (!Array.isArray(target_group_ids) || target_group_ids.length === 0) {
+      return res.status(400).json({ error: 'Selecione pelo menos um grupo de destino.' });
+    }
+
+    if (!content?.trim() && !audio_url) {
+      return res.status(400).json({ error: 'Informe uma mensagem em texto ou anexe um áudio para disparo.' });
+    }
+
+    // 1. Obter lista de usuários dos grupos selecionados com deduplicação (DISTINCT)
+    const { data: memberRows, error: membersError } = await supabaseAdmin
+      .from('izaque_user_group_members')
+      .select('user_id')
+      .in('group_id', target_group_ids);
+
+    if (membersError) throw membersError;
+
+    // Deduplicação: cria conjunto de IDs únicos
+    const uniqueUserIds = Array.from(new Set((memberRows || []).map((m) => m.user_id)));
+
+    if (uniqueUserIds.length === 0) {
+      return res.status(400).json({
+        error: 'Nenhum usuário foi encontrado nos grupos selecionados para receber o comunicado.',
+      });
+    }
+
+    // 2. Registrar o broadcast na tabela izaque_group_broadcasts
+    const { data: broadcast, error: broadcastError } = await supabaseAdmin
+      .from('izaque_group_broadcasts')
+      .insert({
+        title: title.trim(),
+        content: content ? content.trim() : '',
+        audio_url: audio_url || null,
+        target_group_ids,
+        sender_id: sender_id || null,
+      })
+      .select()
+      .single();
+
+    if (broadcastError) throw broadcastError;
+
+    // 3. Criar notificações individuais para cada usuário único
+    const notificationsToInsert = uniqueUserIds.map((uId) => ({
+      user_id: uId,
+      broadcast_id: broadcast.id,
+      title: title.trim(),
+      content: content ? content.trim() : '',
+      audio_url: audio_url || null,
+      is_read: false,
+    }));
+
+    const { error: notifError } = await supabaseAdmin
+      .from('izaque_user_notifications')
+      .insert(notificationsToInsert);
+
+    if (notifError) throw notifError;
+
+    res.status(201).json({
+      success: true,
+      broadcastId: broadcast.id,
+      deliveredUsersCount: uniqueUserIds.length,
+      message: `Comunicado enviado com sucesso para ${uniqueUserIds.length} usuário(s)!`,
+    });
+  } catch (error) {
+    console.error('❌ Erro no envio de comunicado para grupos:', error);
+    res.status(500).json({ error: 'Erro ao enviar comunicado para grupos: ' + error.message });
+  }
+}
+
+/**
+ * 39. Listar histórico de disparos por grupo (Superadmin)
+ * GET /api/admin/group-broadcasts
+ */
+export async function getAdminGroupBroadcasts(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_group_broadcasts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar comunicados:', error);
+    res.status(500).json({ error: 'Erro ao carregar histórico de comunicados.' });
+  }
+}
+
+/**
+ * 40. Obter notificações e comunicados do usuário logado (In-App)
+ * GET /api/user/notifications/:userId
+ */
+export async function getUserNotifications(req, res) {
+  try {
+    const { userId } = req.params;
+    const { data, error } = await supabaseAdmin
+      .from('izaque_user_notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao buscar notificações do usuário:', error);
+    res.status(500).json({ error: 'Erro ao carregar notificações.' });
+  }
+}
+
+/**
+ * 41. Marcar notificação como lida
+ * PATCH /api/user/notifications/:id/read
+ */
+export async function markNotificationAsRead(req, res) {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabaseAdmin
+      .from('izaque_user_notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao marcar notificação como lida:', error);
+    res.status(500).json({ error: 'Erro ao atualizar notificação.' });
+  }
+}
+
+/**
+ * 42. Marcar todas as notificações do usuário como lidas
+ * PATCH /api/user/notifications/read-all/:userId
+ */
+export async function markAllNotificationsAsRead(req, res) {
+  try {
+    const { userId } = req.params;
+    const { error } = await supabaseAdmin
+      .from('izaque_user_notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('❌ Erro ao marcar todas notificações como lidas:', error);
+    res.status(500).json({ error: 'Erro ao atualizar notificações.' });
+  }
+}
+
+
 
 
 

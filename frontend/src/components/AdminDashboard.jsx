@@ -58,6 +58,7 @@ import AgentKnowledgeManager from './AgentKnowledgeManager';
 import AdminHelpGuide from './AdminHelpGuide';
 import AdminBroadcastEmail from './AdminBroadcastEmail';
 import AdminGuidedConversations from './AdminGuidedConversations';
+import AdminUserGroups from './AdminUserGroups';
 
 export default function AdminDashboard({ currentUser }) {
   const [activeTab, setActiveTab] = useState('metrics'); // 'users' | 'plans' | 'subscriptions' | 'feedbacks' | 'memories' | 'agents' | 'help' | 'broadcast'
@@ -628,6 +629,18 @@ export default function AdminDashboard({ currentUser }) {
             >
               <Compass className="w-3.5 h-3.5" />
               Conversas Direcionadas
+            </button>
+
+            <button
+              onClick={() => setActiveTab('groups')}
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'groups'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Grupos & Disparos
             </button>
 
             <button
@@ -1742,6 +1755,11 @@ export default function AdminDashboard({ currentUser }) {
         {/* ABA 9: CONVERSAS DIRECIONADAS DO SISTEMA */}
         {activeTab === 'guided' && (
           <AdminGuidedConversations agents={agents} />
+        )}
+
+        {/* ABA 10: GRUPOS DE USUÁRIOS & DISPAROS */}
+        {activeTab === 'groups' && (
+          <AdminUserGroups allUsers={users} currentUser={currentUser} />
         )}
 
         {/* MODAL PARA CRIAR AGENTE */}

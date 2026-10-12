@@ -773,3 +773,73 @@ export async function fetchPublicGuidedConversations() {
 
   return [];
 }
+
+/**
+ * Notificações e Comunicados recebidos pelo Usuário (In-App)
+ */
+export async function fetchUserNotifications(userId) {
+  if (!userId) return [];
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/user/notifications/${userId}`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch (err) {
+    console.warn('Aviso ao buscar notificações via backend:', err);
+  }
+
+  // Fallback Supabase
+  try {
+    const { data, error } = await supabase
+      .from('izaque_user_notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (!error && data) return data;
+  } catch (err) {
+    console.error('Erro no fallback de notificações Supabase:', err);
+  }
+
+  return [];
+}
+
+export async function markNotificationAsRead(notificationId) {
+  if (!notificationId) return null;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/user/notifications/${notificationId}/read`, {
+      method: 'PATCH',
+    });
+    if (res.ok) return await res.json();
+  } catch {}
+
+  const { data } = await supabase
+    .from('izaque_user_notifications')
+    .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq('id', notificationId)
+    .select()
+    .single();
+
+  return data;
+}
+
+export async function markAllNotificationsAsRead(userId) {
+  if (!userId) return null;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/user/notifications/read-all/${userId}`, {
+      method: 'PATCH',
+    });
+    if (res.ok) return true;
+  } catch {}
+
+  await supabase
+    .from('izaque_user_notifications')
+    .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('is_read', false);
+
+  return true;
+}
+

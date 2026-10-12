@@ -591,3 +591,232 @@ export async function deleteAdminGuidedConversation(id) {
   if (error) throw error;
   return true;
 }
+
+/**
+ * Gestão de Grupos de Usuários & Classificação N:N (Superadmin)
+ */
+export async function fetchAdminUserGroups() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/user-groups`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  // Fallback Supabase
+  try {
+    const { data: groups, error } = await supabase
+      .from('izaque_user_groups')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return groups || [];
+  } catch (err) {
+    console.error('Erro no fallback de grupos admin:', err);
+    return [];
+  }
+}
+
+export async function createAdminUserGroup(payload) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/user-groups`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_user_groups')
+    .insert([payload])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { ...data, member_count: 0 };
+}
+
+export async function updateAdminUserGroup(id, payload) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/user-groups/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_user_groups')
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteAdminUserGroup(id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/user-groups/${id}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) return true;
+  } catch {}
+
+  const { error } = await supabase
+    .from('izaque_user_groups')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+  return true;
+}
+
+export async function fetchAdminGroupMembers(groupId) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/user-groups/${groupId}/members`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_user_group_members')
+    .select('user_id')
+    .eq('group_id', groupId);
+
+  if (error) throw error;
+  const userIds = (data || []).map((m) => m.user_id);
+  if (userIds.length === 0) return [];
+
+  const { data: profiles } = await supabase
+    .from('izaque_profiles')
+    .select('id, full_name, email, avatar_url, role, plan_status')
+    .in('id', userIds);
+
+  return profiles || [];
+}
+
+export async function fetchUserAssignedGroups(userId) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/users/${userId}/groups`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_user_group_members')
+    .select('group_id')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return (data || []).map((row) => row.group_id);
+}
+
+export async function setUserAssignedGroups(userId, groupIds) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/users/${userId}/groups`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupIds }),
+    });
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  // Fallback Supabase
+  await supabase
+    .from('izaque_user_group_members')
+    .delete()
+    .eq('user_id', userId);
+
+  if (Array.isArray(groupIds) && groupIds.length > 0) {
+    const inserts = groupIds.map((gId) => ({
+      group_id: gId,
+      user_id: userId,
+    }));
+    await supabase.from('izaque_user_group_members').insert(inserts);
+  }
+
+  return { success: true, groupIds };
+}
+
+/**
+ * Disparar Mensagem de Texto e/ou Áudio para Grupos (Superadmin)
+ */
+export async function sendAdminGroupBroadcast({ title, content, audio_url, target_group_ids, sender_id }) {
+  const res = await fetch(`${BACKEND_URL}/api/admin/group-broadcasts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content, audio_url, target_group_ids, sender_id }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Falha ao disparar comunicado para os grupos.');
+  }
+
+  return data;
+}
+
+export async function fetchAdminGroupBroadcasts() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/group-broadcasts`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data } = await supabase
+    .from('izaque_group_broadcasts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return data || [];
+}
+
+/**
+ * Upload de arquivo ou gravação de áudio para bucket Supabase
+ */
+export async function uploadBroadcastAudio(audioBlobOrFile) {
+  try {
+    const ext = audioBlobOrFile.name ? audioBlobOrFile.name.split('.').pop() : 'webm';
+    const fileName = `broadcast_${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('broadcasts')
+      .upload(fileName, audioBlobOrFile, {
+        cacheControl: '3600',
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('broadcasts')
+      .getPublicUrl(fileName);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('❌ Erro no upload de áudio de broadcast:', error);
+    throw error;
+  }
+}
+
