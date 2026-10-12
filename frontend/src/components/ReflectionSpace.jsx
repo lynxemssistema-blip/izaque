@@ -191,6 +191,16 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     : activeAgents.find((a) => a.id === selectedAgentId || a.slug === selectedAgentId);
 
   const currentStarterQuestions = React.useMemo(() => {
+    // 1. Prioridade Máxima: Perguntas do Roteiro da Conversa Direcionada (Superadmin)
+    if (activeGuidedTopic?.questions && Array.isArray(activeGuidedTopic.questions) && activeGuidedTopic.questions.length > 0) {
+      return activeGuidedTopic.questions.map((q, idx) => ({
+        id: q.id || `guided-q-${idx}`,
+        text: typeof q === 'string' ? q : (q.text || q.question || ''),
+        category: activeGuidedTopic.category || 'Conversa Direcionada',
+        isGuided: true,
+      })).filter((q) => q.text.trim().length > 0);
+    }
+
     if (activeAgent) {
       return Array.isArray(activeAgent.starter_questions) ? activeAgent.starter_questions : [];
     }
@@ -207,7 +217,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       }
     });
     return combined;
-  }, [activeAgent, activeAgents]);
+  }, [activeGuidedTopic, activeAgent, activeAgents]);
 
   const handleSelectStarterQuestion = (questionText) => {
     if (!questionText || isReflecting) return;
@@ -392,7 +402,9 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       setIsSessionsDrawerOpen(false);
 
       const sessionObj = sessions.find((s) => s.id === sessionId);
-      const matchedGuided = guidedConversations.find((g) => g.title === sessionObj?.title);
+      const matchedGuided = guidedConversations.find(
+        (g) => (sessionObj?.guided_conversation_id && g.id === sessionObj.guided_conversation_id) || g.title === sessionObj?.title
+      );
       setActiveGuidedTopic(matchedGuided || null);
 
       const historyData = await fetchChatHistory(user.id, sessionId);
@@ -426,6 +438,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       if (newSession) {
         setSessions((prev) => [newSession, ...prev]);
         setActiveSessionId(newSession.id);
+        setActiveGuidedTopic(null);
         localStorage.setItem('izaque_active_session_id', newSession.id);
         setReflections([
           {
@@ -463,7 +476,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
 
       let newSessionId = null;
       if (user?.id) {
-        const newSess = await createUserSession(user.id, guided.title);
+        const newSess = await createUserSession(user.id, guided.title, guided.id);
         if (newSess) {
           newSessionId = newSess.id;
           setSessions((prev) => [newSess, ...prev]);
@@ -476,11 +489,16 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       }
       setActiveGuidedTopic(guided);
 
+      const questionsPreview = (guided.questions && Array.isArray(guided.questions) && guided.questions.length > 0)
+        ? `\n\n📌 **Roteiro Prioritário Definido pelo Superadmin:**\n` +
+          guided.questions.map((q, i) => `${i + 1}. *${typeof q === 'string' ? q : q.text}*`).join('\n')
+        : '';
+
       setReflections([
         {
           id: 'initial',
           role: 'guide',
-          content: `Olá... Seja muito bem-vindo(a) a esta conversa direcionada sobre "${guided.title}".\n\n${guided.description || 'Este é um espaço seguro e focado para reflexão.'}\n\nVocê pode tocar em uma das perguntas do tema preparadas logo abaixo ou desabafar sobre o que estiver no seu coração agora.`,
+          content: `Olá... Seja muito bem-vindo(a) a esta conversa direcionada sobre "${guided.title}".\n\n${guided.description || 'Este é um espaço seguro e focado para reflexão profunda.'}${questionsPreview}\n\nO mentor conduzirá a reflexão priorizando explorar estas perguntas do roteiro. Você pode tocar em uma das perguntas sugeridas logo abaixo ou responder como isso ressoa em você agora.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           memoriesRecalled: 0,
           knowledgeApplied: 0,
@@ -809,6 +827,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         agentId: selectedAgentId,
         history,
         sessionId: activeSessionId,
+        guidedConversationId: activeGuidedTopic?.id || null,
       });
 
       if (res.sessionId && res.sessionId !== activeSessionId) {
@@ -971,6 +990,7 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         durationSeconds,
         history,
         sessionId: activeSessionId,
+        guidedConversationId: activeGuidedTopic?.id || null,
       });
 
       if (res.sessionId && res.sessionId !== activeSessionId) {
@@ -1312,10 +1332,17 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
                 {sessions.find((s) => s.id === activeSessionId)?.title || 'Reflexão'}
               </span>
             </h2>
-            <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5 mt-0.5 truncate">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400 shrink-0" />
-              <span>Mentoria ativa • Visão contínua da sua jornada</span>
-            </p>
+            {activeGuidedTopic ? (
+              <p className="text-[10px] sm:text-[11px] text-amber-700 dark:text-amber-300 font-medium flex items-center gap-1.5 mt-0.5 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                <span>Conversa Direcionada • Mentor conduzindo roteiro do Superadmin</span>
+              </p>
+            ) : (
+              <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5 mt-0.5 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400 shrink-0" />
+                <span>Mentoria ativa • Visão contínua da sua jornada</span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -1471,6 +1498,35 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
 
       {/* ÁREA DE MENSAGENS (LAYOUT ESTILO WHATSAPP ELEGANTE & TERAPÊUTICO) */}
       <main className="flex-1 overflow-y-auto overscroll-contain px-3 sm:px-6 py-4 sm:py-6 space-y-4">
+        {activeGuidedTopic && (
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 shadow-xs mb-2">
+            <div className="flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-700/10 dark:bg-amber-400/15 border border-amber-700/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0 mt-0.5">
+                <Compass className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] uppercase font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200">
+                    {activeGuidedTopic.category || 'Conversa Direcionada'}
+                  </span>
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-100 font-serif">
+                    {activeGuidedTopic.title}
+                  </span>
+                </div>
+                {activeGuidedTopic.description && (
+                  <p className="text-[11px] text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
+                    {activeGuidedTopic.description}
+                  </p>
+                )}
+                <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 mt-1.5 font-medium flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                  <span>Prioridade do Mentor: Conduzir ativamente a reflexão pelas perguntas definidas pelo Superadmin.</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loadingHistory && (
           <div className="text-center py-4 text-xs text-stone-500 font-serif flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin text-teal-700" />
@@ -1613,7 +1669,9 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
                   <span className="text-[11px] font-serif text-stone-500 dark:text-stone-400 flex items-center gap-1.5 truncate">
                     <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                     <span className="font-medium truncate">
-                      {activeAgent ? `Sugestões de ${activeAgent.name.split(' - ')[0]}` : 'Perguntas sugeridas para conduzir sua reflexão'}:
+                      {activeGuidedTopic
+                        ? `Roteiro do Superadmin: ${activeGuidedTopic.title}`
+                        : (activeAgent ? `Sugestões de ${activeAgent.name.split(' - ')[0]}` : 'Perguntas sugeridas para conduzir sua reflexão')}:
                     </span>
                   </span>
 

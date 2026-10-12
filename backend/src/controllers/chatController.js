@@ -277,7 +277,7 @@ Retorne EXCLUSIVAMENTE o ID ou Slug do especialista escolhido. Não inclua expli
 /**
  * Executa a orquestração completa: RAG de memórias, super-prompt e Gemini
  */
-async function processChatMessageCore({ message, userId, agentId, history = [] }) {
+async function processChatMessageCore({ message, userId, agentId, history = [], sessionId = null, guidedConversationId = null }) {
   const { data: allActiveAgents } = await supabaseAdmin
     .from('izaque_agents')
     .select('id, name, slug, type, system_prompt, temperature')
@@ -323,12 +323,55 @@ async function processChatMessageCore({ message, userId, agentId, history = [] }
     }
   }
 
-  // 4. Monta o Super-Prompt com Persona + Conhecimento Técnico + Memórias Pessoais
+  // 4. Se for uma Conversa Direcionada definida pelo Superadmin, extrai roteiro de perguntas
+  let guidedConversation = null;
+  let guidedInstruction = '';
+  try {
+    guidedConversation = await getGuidedConversationContext(guidedConversationId, sessionId);
+    if (guidedConversation) {
+      let rawQuestions = [];
+      if (Array.isArray(guidedConversation.questions)) {
+        rawQuestions = guidedConversation.questions;
+      } else if (typeof guidedConversation.questions === 'string') {
+        try {
+          rawQuestions = JSON.parse(guidedConversation.questions);
+        } catch {}
+      }
+
+      if (rawQuestions.length > 0) {
+        const formattedQuestions = rawQuestions
+          .map((q, idx) => `   Pergunta ${idx + 1}: "${typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q))}"`)
+          .join('\n');
+
+        guidedInstruction = `
+🎯 PROTOCOLO DE CONVERSA DIRECIONADA (PRIORIDADE MÁXIMA DEFINIDA PELO SUPERADMIN):
+Esta sessão é uma CONVERSA DIRECIONADA com tema: "${guidedConversation.title}".
+${guidedConversation.description ? `Propósito/Objetivo: "${guidedConversation.description}"` : ''}
+
+ROTEIRO OBRIGATÓRIO DE PERGUNTAS DO SUPERADMIN:
+${formattedQuestions}
+
+SUA PRIORIDADE MÁXIMA E INEGOCIÁVEL NESTA INTERAÇÃO É DIRECIONAR A CONVERSA PARA AS PERGUNTAS DEFINIDAS PELO SUPERADMIN ACIMA:
+1. DIRECIONAMENTO ATIVO DO DIÁLOGO: Seu papel principal não é apenas responder passivamente, mas conduzir deliberada e habilmente o usuário através desse roteiro de perguntas.
+2. PONTE EMPÁTICA (ACOLHER E DIRECIONAR): Sempre acolha o que o usuário acabou de dizer com calor humano, empatia e validação emocional (1 a 2 parágrafos curtos). Em seguida, faça imediatamente uma transição natural, assertiva e conectada para a pergunta do roteiro que precisa ser trabalhada.
+3. FIRMEZA CONTRA DISPERSÕES E EVASÕES: Se o usuário divagar, contar histórias paralelas que fujam do cerne, ou tentar mudar de assunto, acolha brevemente, mas não se perca na dispersão. Traga-o com carinho, autoridade de mentor e firmeza de volta ao tema central e à pergunta da vez.
+4. UMA PERGUNTA POR VEZ: NUNCA faça mais de uma pergunta de uma só vez nem despeje o questionário inteiro. Avance ordenadamente, dando espaço para o usuário digerir e responder cada etapa.
+5. CONSCIÊNCIA DE PROGRESSO NO HISTÓRICO: Examine o histórico recente da conversa para identificar quais perguntas das listadas acima o usuário já respondeu com substância. Direcione o seu foco para a PRÓXIMA pergunta ainda não respondida.
+6. FECHAMENTO PRÁTICO: Quando todas as perguntas do roteiro forem respondidas, consolide os pontos fortes revelados pelo usuário e encerre a conversa com uma reflexão final inspiradora e uma ação prática para as próximas 24 horas.`;
+      }
+    }
+  } catch (gErr) {
+    console.warn('⚠️ Falha ao carregar contexto de conversa direcionada:', gErr.message);
+  }
+
+  // 5. Monta o Super-Prompt com Persona + Conhecimento Técnico + Memórias Pessoais + Diretriz Direcionada
   const fullSystemInstruction = `${selectedAgent.system_prompt}
 
 ${knowledgeText}
 
 ${memoriesText}
+
+${guidedInstruction}
 
 DIRETRIZES DO IZAQUE (OTIMIZADO PARA FALA HUMANA E ACOLHIMENTO):
 1. Sua resposta será lida em voz alta por uma voz humana empática. NUNCA use listas com marcadores (* ou -), tópicos enumerados, emojis ou formatação Markdown excessiva.
@@ -410,28 +453,95 @@ DIRETRIZES DO IZAQUE (OTIMIZADO PARA FALA HUMANA E ACOLHIMENTO):
     selectedAgent,
     relevantMemories,
     relevantKnowledge,
+    guidedConversation,
   };
+}
+
+/**
+ * Recupera o contexto e roteiro de perguntas de uma Conversa Direcionada
+ */
+async function getGuidedConversationContext(guidedConversationId, sessionId) {
+  const isUuid = (val) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val || '');
+
+  let targetGuidedId = isUuid(guidedConversationId) ? guidedConversationId : null;
+  let sessionTitle = null;
+
+  if (!targetGuidedId && isUuid(sessionId)) {
+    try {
+      const { data: sess } = await supabaseAdmin
+        .from('izaque_chat_sessions')
+        .select('guided_conversation_id, title')
+        .eq('id', sessionId)
+        .maybeSingle();
+
+      if (sess) {
+        if (isUuid(sess.guided_conversation_id)) {
+          targetGuidedId = sess.guided_conversation_id;
+        }
+        sessionTitle = sess.title;
+      }
+    } catch (e) {
+      console.warn('⚠️ Falha ao verificar sessão para conversa direcionada:', e.message);
+    }
+  }
+
+  // 1. Busca por ID da conversa direcionada
+  if (targetGuidedId) {
+    try {
+      const { data: guided } = await supabaseAdmin
+        .from('izaque_guided_conversations')
+        .select('id, title, description, category, questions, agent_slug')
+        .eq('id', targetGuidedId)
+        .maybeSingle();
+
+      if (guided) return guided;
+    } catch (e) {
+      console.warn('⚠️ Falha ao buscar conversa direcionada por ID:', e.message);
+    }
+  }
+
+  // 2. Fallback: Busca por título se o nome da sessão coincidir com conversa direcionada ativa
+  if (sessionTitle && sessionTitle.trim()) {
+    try {
+      const { data: guidedByTitle } = await supabaseAdmin
+        .from('izaque_guided_conversations')
+        .select('id, title, description, category, questions, agent_slug')
+        .ilike('title', sessionTitle.trim())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (guidedByTitle) return guidedByTitle;
+    } catch (e) {
+      console.warn('⚠️ Falha ao buscar conversa direcionada por título:', e.message);
+    }
+  }
+
+  return null;
 }
 
 /**
  * Garante que uma mensagem pertença a uma sessão válida do usuário.
  * Se nenhuma sessão for informada, associa à sessão mais recente ou cria uma nova com título contextual.
  */
-async function ensureUserSession(userId, sessionId, firstMessage = '') {
+async function ensureUserSession(userId, sessionId, firstMessage = '', guidedConversationId = null) {
   const isUuid = (val) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val || '');
 
   if (isUuid(sessionId)) {
     const { data: existing } = await supabaseAdmin
       .from('izaque_chat_sessions')
-      .select('id')
+      .select('id, guided_conversation_id')
       .eq('id', sessionId)
       .eq('user_id', userId)
       .maybeSingle();
 
     if (existing) {
+      const updatePayload = { updated_at: new Date().toISOString() };
+      if (!existing.guided_conversation_id && isUuid(guidedConversationId)) {
+        updatePayload.guided_conversation_id = guidedConversationId;
+      }
       await supabaseAdmin
         .from('izaque_chat_sessions')
-        .update({ updated_at: new Date().toISOString() })
+        .update(updatePayload)
         .eq('id', existing.id);
       return existing.id;
     }
@@ -440,16 +550,20 @@ async function ensureUserSession(userId, sessionId, firstMessage = '') {
   if (isUuid(userId)) {
     const { data: latest } = await supabaseAdmin
       .from('izaque_chat_sessions')
-      .select('id')
+      .select('id, guided_conversation_id')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (latest) {
+      const updatePayload = { updated_at: new Date().toISOString() };
+      if (!latest.guided_conversation_id && isUuid(guidedConversationId)) {
+        updatePayload.guided_conversation_id = guidedConversationId;
+      }
       await supabaseAdmin
         .from('izaque_chat_sessions')
-        .update({ updated_at: new Date().toISOString() })
+        .update(updatePayload)
         .eq('id', latest.id);
       return latest.id;
     }
@@ -464,6 +578,7 @@ async function ensureUserSession(userId, sessionId, firstMessage = '') {
       .insert({
         user_id: userId,
         title: cleanTitle,
+        guided_conversation_id: isUuid(guidedConversationId) ? guidedConversationId : null,
       })
       .select('id')
       .single();
@@ -479,7 +594,7 @@ async function ensureUserSession(userId, sessionId, firstMessage = '') {
  */
 export async function handleChatMessage(req, res) {
   try {
-    const { message, userId, agentId, history = [], sessionId } = req.body;
+    const { message, userId, agentId, history = [], sessionId, guidedConversationId } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim() === '') {
       return res.status(400).json({ error: 'O campo "message" é obrigatório.' });
@@ -489,17 +604,19 @@ export async function handleChatMessage(req, res) {
       return res.status(400).json({ error: 'O campo "userId" é obrigatório.' });
     }
 
-    const { reply, selectedAgent, relevantMemories, relevantKnowledge } = await processChatMessageCore({
+    const { reply, selectedAgent, relevantMemories, relevantKnowledge, guidedConversation } = await processChatMessageCore({
       message,
       userId,
       agentId,
       history,
+      sessionId,
+      guidedConversationId,
     });
 
     // Garante que a mensagem pertença a uma sessão de conversa do usuário
     let resolvedSessionId = null;
     try {
-      resolvedSessionId = await ensureUserSession(userId, sessionId, message);
+      resolvedSessionId = await ensureUserSession(userId, sessionId, message, guidedConversationId || guidedConversation?.id);
     } catch (sErr) {
       console.warn('⚠️ Aviso ao resolver sessão do chat:', sErr.message);
     }
@@ -526,6 +643,11 @@ export async function handleChatMessage(req, res) {
         slug: selectedAgent.slug,
         type: selectedAgent.type,
       },
+      guidedConversation: guidedConversation ? {
+        id: guidedConversation.id,
+        title: guidedConversation.title,
+        questionsCount: Array.isArray(guidedConversation.questions) ? guidedConversation.questions.length : 0,
+      } : null,
       memoriesUsed: (relevantMemories || []).map(m => ({
         content: m.content,
         category: m.category,
@@ -557,7 +679,7 @@ export async function handleChatMessage(req, res) {
  */
 export async function handleAudioChatMessage(req, res) {
   try {
-    const { audioBase64, mimeType = 'audio/webm', userId, agentId, history = [], durationSeconds, sessionId } = req.body;
+    const { audioBase64, mimeType = 'audio/webm', userId, agentId, history = [], durationSeconds, sessionId, guidedConversationId } = req.body;
 
     if (!audioBase64) {
       return res.status(400).json({ error: 'O áudio em formato base64 é obrigatório.' });
@@ -584,17 +706,19 @@ export async function handleAudioChatMessage(req, res) {
     }
 
     // 2. PROCESSAR O CONTEÚDO TRANSCRITO NO PIPELINE DO MENTOR
-    const { reply, selectedAgent, relevantMemories, relevantKnowledge } = await processChatMessageCore({
+    const { reply, selectedAgent, relevantMemories, relevantKnowledge, guidedConversation } = await processChatMessageCore({
       message: transcription,
       userId,
       agentId,
       history,
+      sessionId,
+      guidedConversationId,
     });
 
     // Garante que o áudio pertença à sessão de conversa ativa
     let resolvedSessionId = null;
     try {
-      resolvedSessionId = await ensureUserSession(userId, sessionId, transcription);
+      resolvedSessionId = await ensureUserSession(userId, sessionId, transcription, guidedConversationId || guidedConversation?.id);
     } catch (sErr) {
       console.warn('⚠️ Aviso ao resolver sessão do chat de áudio:', sErr.message);
     }
@@ -640,6 +764,11 @@ export async function handleAudioChatMessage(req, res) {
         slug: selectedAgent.slug,
         type: selectedAgent.type,
       },
+      guidedConversation: guidedConversation ? {
+        id: guidedConversation.id,
+        title: guidedConversation.title,
+        questionsCount: Array.isArray(guidedConversation.questions) ? guidedConversation.questions.length : 0,
+      } : null,
       memoriesUsed: (relevantMemories || []).map(m => ({
         content: m.content,
         category: m.category,
@@ -676,7 +805,7 @@ export async function getUserSessions(req, res) {
 
     let { data: sessions, error } = await supabaseAdmin
       .from('izaque_chat_sessions')
-      .select('id, user_id, title, created_at, updated_at')
+      .select('id, user_id, title, guided_conversation_id, created_at, updated_at')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 
@@ -710,7 +839,7 @@ export async function getUserSessions(req, res) {
  */
 export async function createUserSession(req, res) {
   try {
-    const { userId, title } = req.body;
+    const { userId, title, guidedConversationId } = req.body;
 
     if (!userId) {
       return res.status(400).json({ error: 'userId é obrigatório.' });
@@ -730,6 +859,7 @@ export async function createUserSession(req, res) {
       .insert({
         user_id: userId,
         title: sessionTitle,
+        guided_conversation_id: isUuid(guidedConversationId) ? guidedConversationId : null,
       })
       .select()
       .single();

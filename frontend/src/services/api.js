@@ -99,7 +99,7 @@ async function safeParseJson(response) {
  * @param {Array} [params.history] Histórico recente da conversa
  * @returns {Promise<{reply: string, memoriesUsed: Array, timestamp: string}>}
  */
-export async function sendChatMessage({ message, userId, agentId, history = [], sessionId }) {
+export async function sendChatMessage({ message, userId, agentId, history = [], sessionId, guidedConversationId }) {
   try {
     const response = await fetch(`${BACKEND_URL}/api/chat`, {
       method: 'POST',
@@ -111,6 +111,7 @@ export async function sendChatMessage({ message, userId, agentId, history = [], 
         userId,
         agentId,
         sessionId,
+        guidedConversationId,
         history: history.map((item) => ({
           role: item.role,
           content: item.content,
@@ -186,7 +187,7 @@ export async function fetchActiveAgents() {
  * @param {string} [params.sessionId] ID da sessão de conversa
  * @returns {Promise<{transcription: string, reply: string, agentUsed: object, memoriesUsed: Array, knowledgeUsed: Array, timestamp: string}>}
  */
-export async function sendAudioChatMessage({ audioBase64, mimeType = 'audio/webm', userId, agentId, durationSeconds, history = [], sessionId }) {
+export async function sendAudioChatMessage({ audioBase64, mimeType = 'audio/webm', userId, agentId, durationSeconds, history = [], sessionId, guidedConversationId }) {
   try {
     const response = await fetch(`${BACKEND_URL}/api/chat/audio`, {
       method: 'POST',
@@ -200,6 +201,7 @@ export async function sendAudioChatMessage({ audioBase64, mimeType = 'audio/webm
         agentId,
         durationSeconds,
         sessionId,
+        guidedConversationId,
         history: history.map((item) => ({
           role: item.role,
           content: item.content,
@@ -406,7 +408,7 @@ export async function fetchUserSessions(userId) {
   try {
     const { data, error } = await supabase
       .from('izaque_chat_sessions')
-      .select('id, user_id, title, created_at, updated_at')
+      .select('id, user_id, title, guided_conversation_id, created_at, updated_at')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 
@@ -420,15 +422,16 @@ export async function fetchUserSessions(userId) {
  * Cria uma nova sessão de conversa vazia
  * @param {string} userId
  * @param {string} [title]
+ * @param {string} [guidedConversationId]
  */
-export async function createUserSession(userId, title = 'Nova Reflexão') {
+export async function createUserSession(userId, title = 'Nova Reflexão', guidedConversationId = null) {
   if (!userId) return null;
 
   try {
     const res = await fetch(`${BACKEND_URL}/api/chat/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, title }),
+      body: JSON.stringify({ userId, title, guidedConversationId }),
     });
     if (res.ok) {
       return await res.json();
@@ -439,7 +442,11 @@ export async function createUserSession(userId, title = 'Nova Reflexão') {
   try {
     const { data, error } = await supabase
       .from('izaque_chat_sessions')
-      .insert({ user_id: userId, title })
+      .insert({
+        user_id: userId,
+        title,
+        guided_conversation_id: guidedConversationId || null,
+      })
       .select()
       .single();
     if (!error) return data;
