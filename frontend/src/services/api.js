@@ -99,7 +99,7 @@ async function safeParseJson(response) {
  * @param {Array} [params.history] Histórico recente da conversa
  * @returns {Promise<{reply: string, memoriesUsed: Array, timestamp: string}>}
  */
-export async function sendChatMessage({ message, userId, agentId, history = [] }) {
+export async function sendChatMessage({ message, userId, agentId, history = [], sessionId }) {
   try {
     const response = await fetch(`${BACKEND_URL}/api/chat`, {
       method: 'POST',
@@ -110,6 +110,7 @@ export async function sendChatMessage({ message, userId, agentId, history = [] }
         message,
         userId,
         agentId,
+        sessionId,
         history: history.map((item) => ({
           role: item.role,
           content: item.content,
@@ -182,9 +183,10 @@ export async function fetchActiveAgents() {
  * @param {string} [params.agentId] ID do mentor especialista (ou 'auto')
  * @param {number} [params.durationSeconds] Duração do áudio gravado em segundos
  * @param {Array} [params.history] Histórico recente da conversa
+ * @param {string} [params.sessionId] ID da sessão de conversa
  * @returns {Promise<{transcription: string, reply: string, agentUsed: object, memoriesUsed: Array, knowledgeUsed: Array, timestamp: string}>}
  */
-export async function sendAudioChatMessage({ audioBase64, mimeType = 'audio/webm', userId, agentId, durationSeconds, history = [] }) {
+export async function sendAudioChatMessage({ audioBase64, mimeType = 'audio/webm', userId, agentId, durationSeconds, history = [], sessionId }) {
   try {
     const response = await fetch(`${BACKEND_URL}/api/chat/audio`, {
       method: 'POST',
@@ -197,6 +199,7 @@ export async function sendAudioChatMessage({ audioBase64, mimeType = 'audio/webm
         userId,
         agentId,
         durationSeconds,
+        sessionId,
         history: history.map((item) => ({
           role: item.role,
           content: item.content,
@@ -295,21 +298,25 @@ export async function fetchVoiceAudio({ text, messageId, voiceName = 'Charon' })
 }
 
 /**
- * Busca todo o histórico de conversas do usuário no Supabase para persistência após recarregar a página
+ * Busca o histórico de conversas do usuário no Supabase (filtrado opcionalmente por sessão)
  * @param {string} userId ID único do usuário
- * @returns {Promise<Array<{id: string, role: string, content: string, isVoice: boolean, durationSeconds: number, timestamp: string}>>}
+ * @param {string} [sessionId] ID da sessão específica
+ * @returns {Promise<Array<{id: string, sessionId?: string, role: string, content: string, isVoice: boolean, durationSeconds: number, timestamp: string}>>}
  */
-export async function fetchChatHistory(userId) {
+export async function fetchChatHistory(userId, sessionId = null) {
   if (!userId) return [];
 
   // 1. Tenta buscar via Backend Hermes
   try {
-    const response = await fetch(`${BACKEND_URL}/api/chat/history/${userId}`);
+    const url = sessionId
+      ? `${BACKEND_URL}/api/chat/history/${userId}?sessionId=${sessionId}`
+      : `${BACKEND_URL}/api/chat/history/${userId}`;
+    const response = await fetch(url);
     if (response.ok) {
       const contentType = response.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
         const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) return data;
+        if (Array.isArray(data)) return data;
       }
     }
   } catch {}
@@ -317,10 +324,16 @@ export async function fetchChatHistory(userId) {
   // 2. FALLBACK DIRETO AO BANCO SUPABASE: Garante que as mensagens do usuário
   // carreguem 100% diretamente da nuvem, mesmo sem o backend Node ativo na VPS!
   try {
-    const { data: messages, error } = await supabase
+    let query = supabase
       .from('izaque_messages')
-      .select('id, role, content, is_audio, audio_duration_seconds, created_at, izaque_agents(id, name, slug, type)')
-      .eq('user_id', userId)
+      .select('id, session_id, role, content, is_audio, audio_duration_seconds, created_at, izaque_agents(id, name, slug, type)')
+      .eq('user_id', userId);
+
+    if (sessionId) {
+      query = query.eq('session_id', sessionId);
+    }
+
+    const { data: messages, error } = await query
       .order('created_at', { ascending: true })
       .limit(100);
 
@@ -331,6 +344,7 @@ export async function fetchChatHistory(userId) {
 
     return (messages || []).map((msg) => ({
       id: msg.id,
+      sessionId: msg.session_id,
       role: msg.role === 'assistant' ? 'guide' : 'user',
       content: msg.content,
       isVoice: Boolean(msg.is_audio),
@@ -352,13 +366,17 @@ export async function fetchChatHistory(userId) {
 }
 
 /**
- * Limpa o histórico de conversas do usuário caso deseje reiniciar a sessão
+ * Limpa o histórico de conversas do usuário (ou de uma sessão específica)
  * @param {string} userId ID único do usuário
+ * @param {string} [sessionId] ID da sessão
  */
-export async function clearChatHistory(userId) {
+export async function clearChatHistory(userId, sessionId = null) {
   try {
     if (!userId) return;
-    const response = await fetch(`${BACKEND_URL}/api/chat/history/${userId}`, {
+    const url = sessionId
+      ? `${BACKEND_URL}/api/chat/history/${userId}?sessionId=${sessionId}`
+      : `${BACKEND_URL}/api/chat/history/${userId}`;
+    const response = await fetch(url, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Falha ao limpar histórico');
@@ -366,6 +384,126 @@ export async function clearChatHistory(userId) {
   } catch (error) {
     console.error('❌ Erro ao limpar histórico:', error);
     throw error;
+  }
+}
+
+/**
+ * Busca todas as sessões de conversa do usuário
+ * @param {string} userId
+ */
+export async function fetchUserSessions(userId) {
+  if (!userId) return [];
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat/sessions/${userId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch {}
+
+  // Fallback direto ao Supabase
+  try {
+    const { data, error } = await supabase
+      .from('izaque_chat_sessions')
+      .select('id, user_id, title, created_at, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (!error && Array.isArray(data)) return data;
+  } catch {}
+
+  return [];
+}
+
+/**
+ * Cria uma nova sessão de conversa vazia
+ * @param {string} userId
+ * @param {string} [title]
+ */
+export async function createUserSession(userId, title = 'Nova Reflexão') {
+  if (!userId) return null;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, title }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  // Fallback Supabase
+  try {
+    const { data, error } = await supabase
+      .from('izaque_chat_sessions')
+      .insert({ user_id: userId, title })
+      .select()
+      .single();
+    if (!error) return data;
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Renomeia o título de uma sessão
+ * @param {string} sessionId
+ * @param {string} title
+ */
+export async function updateUserSession(sessionId, title) {
+  if (!sessionId || !title) return null;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  // Fallback Supabase
+  try {
+    const { data, error } = await supabase
+      .from('izaque_chat_sessions')
+      .update({ title, updated_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .select()
+      .single();
+    if (!error) return data;
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Remove uma sessão de conversa e suas mensagens
+ * @param {string} sessionId
+ */
+export async function deleteUserSession(sessionId) {
+  if (!sessionId) return false;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) return true;
+  } catch {}
+
+  // Fallback Supabase
+  try {
+    const { error } = await supabase
+      .from('izaque_chat_sessions')
+      .delete()
+      .eq('id', sessionId);
+    return !error;
+  } catch {
+    return false;
   }
 }
 

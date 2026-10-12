@@ -336,7 +336,8 @@ DIRETRIZES DO IZAQUE (OTIMIZADO PARA FALA HUMANA E ACOLHIMENTO):
 3. USE RETICÊNCIAS (...) estrategicamente para forçar pausas respiratórias e dramáticas na fala. Aja como um mentor com voz mansa e acolhedora.
 4. Confronte desculpas confortáveis, exponha o padrão de autossabotagem e acolha a dor real.
 5. Aplique com autoridade os conceitos da sua base de estudos e integre memórias de longo prazo do usuário com naturalidade.
-6. Conclua com uma reflexão profunda ou um passo prático para as próximas 24 horas.`;
+6. Conclua com uma reflexão profunda ou um passo prático para as próximas 24 horas.
+7. Você mantém uma visão panorâmica e contínua de toda a história de vida deste usuário. Todas as conversas e reflexões passadas compõem uma jornada única: conecte temas, bloqueios e padrões anteriores com naturalidade e sabedoria mesmo em uma nova conversa ou tópico.`;
 
   // 4. Sanitiza o histórico de chat para o Gemini:
   // Gemini exige estritamente que a primeira mensagem seja 'user' e que haja alternância de papéis
@@ -413,11 +414,72 @@ DIRETRIZES DO IZAQUE (OTIMIZADO PARA FALA HUMANA E ACOLHIMENTO):
 }
 
 /**
- * Controller do Chat de Texto Padrão
+ * Garante que uma mensagem pertença a uma sessão válida do usuário.
+ * Se nenhuma sessão for informada, associa à sessão mais recente ou cria uma nova com título contextual.
+ */
+async function ensureUserSession(userId, sessionId, firstMessage = '') {
+  const isUuid = (val) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val || '');
+
+  if (isUuid(sessionId)) {
+    const { data: existing } = await supabaseAdmin
+      .from('izaque_chat_sessions')
+      .select('id')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      await supabaseAdmin
+        .from('izaque_chat_sessions')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+      return existing.id;
+    }
+  }
+
+  if (isUuid(userId)) {
+    const { data: latest } = await supabaseAdmin
+      .from('izaque_chat_sessions')
+      .select('id')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latest) {
+      await supabaseAdmin
+        .from('izaque_chat_sessions')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', latest.id);
+      return latest.id;
+    }
+
+    // Se o usuário não tem nenhuma sessão, cria a primeira
+    let cleanTitle = (firstMessage || '').replace(/\n/g, ' ').trim().slice(0, 36);
+    if (!cleanTitle) cleanTitle = 'Reflexão Inicial';
+    else if (cleanTitle.length === 36) cleanTitle += '...';
+
+    const { data: created } = await supabaseAdmin
+      .from('izaque_chat_sessions')
+      .insert({
+        user_id: userId,
+        title: cleanTitle,
+      })
+      .select('id')
+      .single();
+
+    return created?.id || null;
+  }
+
+  return null;
+}
+
+/**
+ * Controller do Chat de Texto Padrão (Suporta múltiplas sessões com RAG global)
  */
 export async function handleChatMessage(req, res) {
   try {
-    const { message, userId, agentId, history = [] } = req.body;
+    const { message, userId, agentId, history = [], sessionId } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim() === '') {
       return res.status(400).json({ error: 'O campo "message" é obrigatório.' });
@@ -434,14 +496,22 @@ export async function handleChatMessage(req, res) {
       history,
     });
 
+    // Garante que a mensagem pertença a uma sessão de conversa do usuário
+    let resolvedSessionId = null;
+    try {
+      resolvedSessionId = await ensureUserSession(userId, sessionId, message);
+    } catch (sErr) {
+      console.warn('⚠️ Aviso ao resolver sessão do chat:', sErr.message);
+    }
+
     // Salva mensagem de texto no banco de dados (histórico em izaque_messages)
     try {
       const isAgentUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedAgent?.id || '');
       const safeAgentId = isAgentUuid ? selectedAgent.id : null;
 
       await supabaseAdmin.from('izaque_messages').insert([
-        { user_id: userId, agent_id: safeAgentId, role: 'user', content: message, is_audio: false },
-        { user_id: userId, agent_id: safeAgentId, role: 'assistant', content: reply, is_audio: false },
+        { user_id: userId, agent_id: safeAgentId, session_id: resolvedSessionId, role: 'user', content: message, is_audio: false },
+        { user_id: userId, agent_id: safeAgentId, session_id: resolvedSessionId, role: 'assistant', content: reply, is_audio: false },
       ]);
     } catch (dbErr) {
       console.warn('⚠️ Aviso ao persistir mensagens em izaque_messages:', dbErr.message);
@@ -449,6 +519,7 @@ export async function handleChatMessage(req, res) {
 
     res.status(200).json({
       reply,
+      sessionId: resolvedSessionId,
       agentUsed: {
         id: selectedAgent.id,
         name: selectedAgent.name,
@@ -480,13 +551,13 @@ export async function handleChatMessage(req, res) {
 /**
  * Controller de Mensagem de ÁUDIO:
  * 1. Ouve e transcreve o áudio com Gemini Multimodal
- * 2. Salva a transcrição no banco de dados (izaque_messages)
- * 3. Processa a resposta com RAG e Mentor Especialista
- * 4. Retorna a transcrição e a resposta para o frontend
+ * 2. Salva a transcrição no banco de dados vinculada à sessão
+ * 3. Processa a resposta com RAG Global e Mentor Especialista
+ * 4. Retorna a transcrição, resposta e sessionId para o frontend
  */
 export async function handleAudioChatMessage(req, res) {
   try {
-    const { audioBase64, mimeType = 'audio/webm', userId, agentId, history = [], durationSeconds } = req.body;
+    const { audioBase64, mimeType = 'audio/webm', userId, agentId, history = [], durationSeconds, sessionId } = req.body;
 
     if (!audioBase64) {
       return res.status(400).json({ error: 'O áudio em formato base64 é obrigatório.' });
@@ -520,6 +591,14 @@ export async function handleAudioChatMessage(req, res) {
       history,
     });
 
+    // Garante que o áudio pertença à sessão de conversa ativa
+    let resolvedSessionId = null;
+    try {
+      resolvedSessionId = await ensureUserSession(userId, sessionId, transcription);
+    } catch (sErr) {
+      console.warn('⚠️ Aviso ao resolver sessão do chat de áudio:', sErr.message);
+    }
+
     // 3. SALVAR A TRANSCRIÇÃO E A RESPOSTA NO BANCO DE DADOS
     const isAgentUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedAgent?.id || '');
     const safeAgentId = isAgentUuid ? selectedAgent.id : null;
@@ -528,6 +607,7 @@ export async function handleAudioChatMessage(req, res) {
       {
         user_id: userId,
         agent_id: safeAgentId,
+        session_id: resolvedSessionId,
         role: 'user',
         content: transcription,
         is_audio: true,
@@ -536,6 +616,7 @@ export async function handleAudioChatMessage(req, res) {
       {
         user_id: userId,
         agent_id: safeAgentId,
+        session_id: resolvedSessionId,
         role: 'assistant',
         content: reply,
         is_audio: false,
@@ -545,13 +626,14 @@ export async function handleAudioChatMessage(req, res) {
     if (msgErr) {
       console.warn('⚠️ Aviso ao gravar transcrição em izaque_messages:', msgErr);
     } else {
-      console.log(`💾 [Supabase] Transcrição e resposta salvas na tabela izaque_messages!`);
+      console.log(`💾 [Supabase] Transcrição e resposta salvas na tabela izaque_messages (Sessão: ${resolvedSessionId})!`);
     }
 
     // 4. RETORNAR RESPOSTA E TRANSCRIÇÃO PARA O FRONTEND
     res.status(200).json({
       transcription,
       reply,
+      sessionId: resolvedSessionId,
       agentUsed: {
         id: selectedAgent.id,
         name: selectedAgent.name,
@@ -577,9 +659,9 @@ export async function handleAudioChatMessage(req, res) {
 }
 
 /**
- * Retorna todo o histórico de conversas do usuário ordenado cronologicamente
+ * Retorna as sessões de conversa do usuário
  */
-export async function getChatHistory(req, res) {
+export async function getUserSessions(req, res) {
   try {
     const { userId } = req.params;
 
@@ -589,16 +671,162 @@ export async function getChatHistory(req, res) {
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
     if (!isUuid) {
-      // Se não for UUID válido, retorna histórico vazio com total isolamento
       return res.status(200).json([]);
     }
 
-    const { data, error } = await supabaseAdmin
+    let { data: sessions, error } = await supabaseAdmin
+      .from('izaque_chat_sessions')
+      .select('id, user_id, title, created_at, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Se o usuário ainda não tiver nenhuma sessão no banco, cria a primeira sessão padrão
+    if (!sessions || sessions.length === 0) {
+      const { data: newSession, error: createErr } = await supabaseAdmin
+        .from('izaque_chat_sessions')
+        .insert({
+          user_id: userId,
+          title: 'Conversa Principal',
+        })
+        .select()
+        .single();
+
+      if (!createErr && newSession) {
+        sessions = [newSession];
+      }
+    }
+
+    res.status(200).json(sessions || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar sessões do usuário:', error);
+    res.status(500).json({ error: 'Erro ao listar sessões de conversa.', details: error.message });
+  }
+}
+
+/**
+ * Cria uma nova sessão de conversa vazia para o usuário
+ */
+export async function createUserSession(req, res) {
+  try {
+    const { userId, title } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId é obrigatório.' });
+    }
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    if (!isUuid) {
+      return res.status(400).json({ error: 'UUID de usuário inválido.' });
+    }
+
+    const sessionTitle = (title && typeof title === 'string' && title.trim())
+      ? title.trim().slice(0, 60)
+      : 'Nova Reflexão';
+
+    const { data: session, error } = await supabaseAdmin
+      .from('izaque_chat_sessions')
+      .insert({
+        user_id: userId,
+        title: sessionTitle,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(session);
+  } catch (error) {
+    console.error('❌ Erro ao criar nova sessão:', error);
+    res.status(500).json({ error: 'Erro ao criar sessão.', details: error.message });
+  }
+}
+
+/**
+ * Atualiza o título de uma sessão de conversa
+ */
+export async function updateUserSession(req, res) {
+  try {
+    const { sessionId } = req.params;
+    const { title } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId é obrigatório.' });
+    }
+
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({ error: 'Título inválido.' });
+    }
+
+    const { data: updated, error } = await supabaseAdmin
+      .from('izaque_chat_sessions')
+      .update({
+        title: title.trim().slice(0, 60),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', sessionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar sessão:', error);
+    res.status(500).json({ error: 'Erro ao atualizar título da conversa.', details: error.message });
+  }
+}
+
+/**
+ * Exclui uma sessão de conversa e suas respectivas mensagens
+ */
+export async function deleteUserSession(req, res) {
+  try {
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId é obrigatório.' });
+    }
+
+    const { error } = await supabaseAdmin
+      .from('izaque_chat_sessions')
+      .delete()
+      .eq('id', sessionId);
+
+    if (error) throw error;
+
+    res.status(200).json({ success: true, message: 'Sessão removida com sucesso.' });
+  } catch (error) {
+    console.error('❌ Erro ao remover sessão:', error);
+    res.status(500).json({ error: 'Erro ao remover sessão.', details: error.message });
+  }
+}
+
+/**
+ * Retorna o histórico de conversas do usuário (filtrado por sessionId se informado)
+ */
+export async function getChatHistory(req, res) {
+  try {
+    const { userId } = req.params;
+    const { sessionId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId é obrigatório.' });
+    }
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    if (!isUuid) {
+      return res.status(200).json([]);
+    }
+
+    let query = supabaseAdmin
       .from('izaque_messages')
       .select(`
         id,
         user_id,
         agent_id,
+        session_id,
         role,
         content,
         is_audio,
@@ -611,15 +839,22 @@ export async function getChatHistory(req, res) {
           type
         )
       `)
-      .eq('user_id', userId)
+      .eq('user_id', userId);
+
+    const isSessionUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId || '');
+    if (isSessionUuid) {
+      query = query.eq('session_id', sessionId);
+    }
+
+    const { data, error } = await query
       .order('created_at', { ascending: true })
       .limit(100);
 
     if (error) throw error;
 
-    // Formata os dados para o frontend (WhatsApp style)
     const formatted = (data || []).map((msg) => ({
       id: msg.id,
+      sessionId: msg.session_id,
       role: msg.role === 'assistant' ? 'guide' : 'user',
       content: msg.content,
       isVoice: Boolean(msg.is_audio),
@@ -643,21 +878,24 @@ export async function getChatHistory(req, res) {
 }
 
 /**
- * Limpa o histórico de conversas do usuário caso deseje reiniciar a sessão
+ * Limpa o histórico de conversas do usuário (ou de uma sessão específica)
  */
 export async function clearChatHistory(req, res) {
   try {
     const { userId } = req.params;
+    const { sessionId } = req.query;
 
     if (!userId) {
       return res.status(400).json({ error: 'userId é obrigatório.' });
     }
 
-    const { error } = await supabaseAdmin
-      .from('izaque_messages')
-      .delete()
-      .eq('user_id', userId);
+    let query = supabaseAdmin.from('izaque_messages').delete().eq('user_id', userId);
+    const isSessionUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId || '');
+    if (isSessionUuid) {
+      query = query.eq('session_id', sessionId);
+    }
 
+    const { error } = await query;
     if (error) throw error;
 
     res.status(200).json({ message: 'Histórico de conversas reiniciado com sucesso.' });

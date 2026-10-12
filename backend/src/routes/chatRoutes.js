@@ -5,11 +5,21 @@ import {
   getActiveAgents,
   getChatHistory,
   clearChatHistory,
+  getUserSessions,
+  createUserSession,
+  updateUserSession,
+  deleteUserSession,
 } from '../controllers/chatController.js';
 import { handleGenerateVoice } from '../controllers/voiceController.js';
 import { getProfile, updateProfile } from '../controllers/profileController.js';
 
 const router = Router();
+
+// Sessões de Conversa do Usuário (Múltiplas Conversas com RAG e Memória Global Unificada)
+router.get('/chat/sessions/:userId', getUserSessions);
+router.post('/chat/sessions', createUserSession);
+router.patch('/chat/sessions/:sessionId', updateUserSession);
+router.delete('/chat/sessions/:sessionId', deleteUserSession);
 
 // Perfil do Usuário (Visualização e Edição de Nome, Foto e WhatsApp)
 router.get('/profile/:userId', getProfile);

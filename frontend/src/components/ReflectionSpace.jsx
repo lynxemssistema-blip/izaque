@@ -25,6 +25,13 @@ import {
   ArrowLeft,
   Palette,
   X,
+  MessageSquare,
+  Plus,
+  Edit2,
+  Trash2,
+  ListPlus,
+  History,
+  Clock,
 } from 'lucide-react';
 import {
   sendChatMessage,
@@ -35,6 +42,10 @@ import {
   clearChatHistory,
   cleanTextForSpeech,
   updateUserProfile,
+  fetchUserSessions,
+  createUserSession,
+  updateUserSession,
+  deleteUserSession,
 } from '../services/api';
 import { ambientAudio } from '../services/ambientAudioService';
 import { humanVoiceService } from '../services/voiceService';
@@ -285,7 +296,15 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     window.dispatchEvent(new Event('storage'));
   };
 
-  // Carregar histórico persistente do banco de dados (Supabase izaque_messages)
+  // Multi-Sessões de Conversa com Memória Global Unificada
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [isSessionsDrawerOpen, setIsSessionsDrawerOpen] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [editingTitleText, setEditingTitleText] = useState('');
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+
+  // Carregar sessões e histórico persistente do banco de dados (Supabase izaque_chat_sessions & izaque_messages)
   useEffect(() => {
     if (!user?.id) {
       setLoadingHistory(false);
@@ -293,12 +312,39 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     }
 
     let isMounted = true;
-    const loadPersistedHistory = async () => {
+    const initSessionsAndHistory = async () => {
       try {
         setLoadingHistory(true);
-        const historyData = await fetchChatHistory(user.id);
-        if (isMounted && historyData && historyData.length > 0) {
-          setReflections(historyData);
+        const userSessions = await fetchUserSessions(user.id);
+        if (!isMounted) return;
+
+        setSessions(userSessions);
+
+        const savedSessionId = localStorage.getItem('izaque_active_session_id');
+        const matched = userSessions.find((s) => s.id === savedSessionId);
+        const currentId = matched ? matched.id : (userSessions[0]?.id || null);
+
+        setActiveSessionId(currentId);
+        if (currentId) {
+          localStorage.setItem('izaque_active_session_id', currentId);
+          const historyData = await fetchChatHistory(user.id, currentId);
+          if (isMounted) {
+            if (historyData && historyData.length > 0) {
+              setReflections(historyData);
+            } else {
+              const currentSessObj = userSessions.find((s) => s.id === currentId);
+              setReflections([
+                {
+                  id: 'initial',
+                  role: 'guide',
+                  content: `Olá... Respire fundo e sinta-se em paz. Este é o seu espaço de reflexão dedicado a "${currentSessObj?.title || 'sua jornada'}", livre de cobranças ou julgamentos do mundo lá fora.\n\nO que tem pesado na sua mente ou no seu coração ultimamente?`,
+                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  memoriesRecalled: 0,
+                  knowledgeApplied: 0,
+                },
+              ]);
+            }
+          }
         }
       } catch (err) {
         console.warn('Histórico persistido indisponível no momento:', err?.message);
@@ -309,12 +355,123 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
       }
     };
 
-    loadPersistedHistory();
+    initSessionsAndHistory();
 
     return () => {
       isMounted = false;
     };
   }, [user?.id]);
+
+  const handleSelectSession = async (sessionId) => {
+    if (sessionId === activeSessionId || !user?.id) {
+      setIsSessionsDrawerOpen(false);
+      return;
+    }
+
+    try {
+      setLoadingHistory(true);
+      setActiveSessionId(sessionId);
+      localStorage.setItem('izaque_active_session_id', sessionId);
+      setIsSessionsDrawerOpen(false);
+
+      const historyData = await fetchChatHistory(user.id, sessionId);
+      if (historyData && historyData.length > 0) {
+        setReflections(historyData);
+      } else {
+        const sessionObj = sessions.find((s) => s.id === sessionId);
+        setReflections([
+          {
+            id: 'initial',
+            role: 'guide',
+            content: `Olá... Este é o espaço de reflexão dedicado a "${sessionObj?.title || 'esta conversa'}".\n\nFique à vontade para desabafar ou dar continuidade aos seus pensamentos com total sigilo.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            memoriesRecalled: 0,
+            knowledgeApplied: 0,
+          },
+        ]);
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar sessão:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleCreateNewSession = async () => {
+    if (!user?.id || isCreatingSession) return;
+    setIsCreatingSession(true);
+    try {
+      const newSession = await createUserSession(user.id, 'Nova Reflexão');
+      if (newSession) {
+        setSessions((prev) => [newSession, ...prev]);
+        setActiveSessionId(newSession.id);
+        localStorage.setItem('izaque_active_session_id', newSession.id);
+        setReflections([
+          {
+            id: 'initial',
+            role: 'guide',
+            content: `Olá... Respire fundo. Iniciamos uma nova conversa para você organizar seus pensamentos e novos desafios.\n\nO que gostaria de trabalhar ou desabafar agora?`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            memoriesRecalled: 0,
+            knowledgeApplied: 0,
+          },
+        ]);
+        setIsSessionsDrawerOpen(false);
+      }
+    } catch (err) {
+      console.error('Erro ao criar sessão:', err);
+    } finally {
+      setIsCreatingSession(false);
+    }
+  };
+
+  const handleStartRename = (session, e) => {
+    e.stopPropagation();
+    setEditingSessionId(session.id);
+    setEditingTitleText(session.title);
+  };
+
+  const handleSaveRename = async (sessionId, e) => {
+    e?.stopPropagation();
+    if (!editingTitleText.trim()) {
+      setEditingSessionId(null);
+      return;
+    }
+    try {
+      const updated = await updateUserSession(sessionId, editingTitleText.trim());
+      if (updated) {
+        setSessions((prev) =>
+          prev.map((s) => (s.id === sessionId ? { ...s, title: updated.title } : s))
+        );
+      }
+    } catch (err) {
+      console.error('Erro ao renomear sessão:', err);
+    } finally {
+      setEditingSessionId(null);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId, e) => {
+    e.stopPropagation();
+    if (!confirm('Deseja realmente excluir esta conversa? As mensagens desta conversa serão removidas, mas suas memórias de longo prazo permanecem salvas para os mentores.')) {
+      return;
+    }
+    try {
+      await deleteUserSession(sessionId);
+      const remaining = sessions.filter((s) => s.id !== sessionId);
+      setSessions(remaining);
+
+      if (activeSessionId === sessionId) {
+        if (remaining.length > 0) {
+          handleSelectSession(remaining[0].id);
+        } else {
+          handleCreateNewSession();
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao excluir sessão:', err);
+    }
+  };
 
   // Estado de Reprodução de Voz do Guia
   const [activeVoiceMessageId, setActiveVoiceMessageId] = useState(null);
@@ -583,7 +740,26 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         userId: user?.id || 'default_user_guest',
         agentId: selectedAgentId,
         history,
+        sessionId: activeSessionId,
       });
+
+      if (res.sessionId && res.sessionId !== activeSessionId) {
+        setActiveSessionId(res.sessionId);
+        localStorage.setItem('izaque_active_session_id', res.sessionId);
+      }
+
+      // Auto-titulação suave se for a primeira mensagem da sessão
+      const currentSess = sessions.find((s) => s.id === (res.sessionId || activeSessionId));
+      if (currentSess && (currentSess.title === 'Nova Reflexão' || currentSess.title === 'Reflexão Inicial' || currentSess.title === 'Reflexão')) {
+        const cleanTitle = text.slice(0, 32) + (text.length > 32 ? '...' : '');
+        updateUserSession(currentSess.id, cleanTitle).then((updated) => {
+          if (updated) {
+            setSessions((prev) =>
+              prev.map((s) => (s.id === currentSess.id ? { ...s, title: updated.title } : s))
+            );
+          }
+        }).catch(() => {});
+      }
 
       const guideEntry = {
         id: (Date.now() + 1).toString(),
@@ -726,7 +902,25 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         agentId: selectedAgentId,
         durationSeconds,
         history,
+        sessionId: activeSessionId,
       });
+
+      if (res.sessionId && res.sessionId !== activeSessionId) {
+        setActiveSessionId(res.sessionId);
+        localStorage.setItem('izaque_active_session_id', res.sessionId);
+      }
+
+      const currentSess = sessions.find((s) => s.id === (res.sessionId || activeSessionId));
+      if (currentSess && (currentSess.title === 'Nova Reflexão' || currentSess.title === 'Reflexão Inicial' || currentSess.title === 'Reflexão')) {
+        const cleanTitle = (res.transcription || 'Reflexão em Áudio').slice(0, 32);
+        updateUserSession(currentSess.id, cleanTitle).then((updated) => {
+          if (updated) {
+            setSessions((prev) =>
+              prev.map((s) => (s.id === currentSess.id ? { ...s, title: updated.title } : s))
+            );
+          }
+        }).catch(() => {});
+      }
 
       // Mensagem transcrita do usuário (Estilo WhatsApp)
       const userAudioEntry = {
@@ -776,6 +970,187 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         onGuideNameChanged={(name) => setGuideName(name)}
       />
 
+      {/* GAVETA / DRAWER LATERAL DE SESSÕES & HISTÓRICO DE CONVERSAS */}
+      <AnimatePresence>
+        {isSessionsDrawerOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-start">
+            {/* Backdrop com blur escurecido */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSessionsDrawerOpen(false)}
+              className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs cursor-pointer"
+            />
+
+            {/* Painel Lateral Deslizante */}
+            <motion.div
+              initial={{ x: '-100%', opacity: 0.8 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '-100%', opacity: 0.8 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
+              className="relative w-full max-w-sm sm:max-w-md h-full bg-stone-50 dark:bg-slate-900 border-r border-stone-200 dark:border-slate-800 shadow-2xl flex flex-col z-10 text-stone-800 dark:text-stone-100 font-sans"
+            >
+              {/* Header do Drawer */}
+              <div className="p-4 sm:p-5 border-b border-stone-200/80 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-2xl bg-teal-700/10 dark:bg-teal-500/20 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-300">
+                    <History className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-serif font-medium leading-tight text-stone-900 dark:text-stone-50">
+                      Suas Conversas
+                    </h3>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                      Organize reflexões por tópico ou momento
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsSessionsDrawerOpen(false)}
+                  className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Banner de Memória Global dos Mentores */}
+              <div className="mx-4 mt-3 p-3 rounded-2xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/40 flex items-start gap-2.5 text-[11px] text-teal-900 dark:text-teal-200 leading-relaxed">
+                <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Memória Contínua Unificada:</strong> Mesmo alternando entre conversas, seus mentores reconhecem toda a sua jornada e histórico sem que você precise se repetir.
+                </span>
+              </div>
+
+              {/* Botão de Criar Nova Sessão */}
+              <div className="p-4 pb-2">
+                <button
+                  type="button"
+                  onClick={handleCreateNewSession}
+                  disabled={isCreatingSession}
+                  className="w-full py-2.5 px-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-medium flex items-center justify-center gap-2 shadow-sm transition active:scale-98 cursor-pointer disabled:opacity-50"
+                >
+                  {isCreatingSession ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  <span>Iniciar Nova Reflexão</span>
+                </button>
+              </div>
+
+              {/* Lista Cronológica de Sessões */}
+              <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
+                <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400 flex items-center justify-between">
+                  <span>Histórico de Tópicos</span>
+                  <span>{sessions.length} {sessions.length === 1 ? 'conversa' : 'conversas'}</span>
+                </div>
+
+                {sessions.map((sess) => {
+                  const isActive = sess.id === activeSessionId;
+                  const isEditing = editingSessionId === sess.id;
+                  const dateStr = new Date(sess.updated_at || sess.created_at).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'short',
+                  });
+
+                  return (
+                    <div
+                      key={sess.id}
+                      onClick={() => !isEditing && handleSelectSession(sess.id)}
+                      className={`group p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                        isActive
+                          ? 'bg-teal-50 dark:bg-teal-950/50 border-teal-300 dark:border-teal-700/80 shadow-xs'
+                          : 'bg-white dark:bg-slate-800/60 border-stone-200/80 dark:border-slate-800 hover:border-stone-300 dark:hover:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={editingTitleText}
+                              onChange={(e) => setEditingTitleText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveRename(sess.id, e);
+                                if (e.key === 'Escape') setEditingSessionId(null);
+                              }}
+                              autoFocus
+                              className="w-full text-xs font-serif px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-teal-600 focus:outline-none text-stone-800 dark:text-stone-100"
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => handleSaveRename(sess.id, e)}
+                              className="p-1 text-teal-700 dark:text-teal-400 hover:bg-teal-100 rounded-md cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingSessionId(null);
+                              }}
+                              className="p-1 text-stone-400 hover:bg-stone-200 rounded-md cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-serif font-medium truncate ${
+                                isActive ? 'text-teal-900 dark:text-teal-200' : 'text-stone-800 dark:text-stone-200'
+                              }`}>
+                                {sess.title}
+                              </span>
+                              {isActive && (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-teal-600 text-white font-sans font-semibold shrink-0">
+                                  Ativa
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-stone-400 dark:text-stone-500 font-mono mt-0.5 block">
+                              {dateStr}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Ações Rápidas: Renomear e Excluir */}
+                      {!isEditing && (
+                        <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => handleStartRename(sess, e)}
+                            title="Renomear conversa"
+                            className="p-1.5 text-stone-400 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          {sessions.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteSession(sess.id, e)}
+                              title="Excluir conversa"
+                              className="p-1.5 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* HEADER DA SESSÃO */}
       <header className="px-3 sm:px-6 py-2 sm:py-3.5 pt-safe border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between shrink-0 gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -789,22 +1164,62 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
+
+          {/* BOTÃO DE MINHAS CONVERSAS (MULTI-SESSÕES) */}
+          <button
+            type="button"
+            onClick={() => setIsSessionsDrawerOpen(true)}
+            title="Minhas Conversas & Sessões de Reflexão"
+            className="p-2 text-stone-600 dark:text-stone-300 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-800 rounded-xl transition min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0 active:scale-95 cursor-pointer relative border border-stone-200/80 dark:border-slate-700 shadow-2xs"
+          >
+            <MessageSquare className="w-4 h-4" />
+            {sessions.length > 1 && (
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-teal-700 dark:bg-teal-500 text-[9px] text-white font-mono font-bold shadow-xs">
+                {sessions.length}
+              </span>
+            )}
+          </button>
+
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shrink-0">
             <Feather className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
           </div>
+
           <div className="min-w-0">
-            <h2 className="text-sm sm:text-base font-serif font-medium text-stone-900 dark:text-stone-50 leading-tight truncate">
-              Sessão com {guideName}
+            <h2 className="text-sm sm:text-base font-serif font-medium text-stone-900 dark:text-stone-50 leading-tight truncate flex items-center gap-1.5">
+              <span>Sessão com {guideName}</span>
+              <span className="hidden md:inline text-stone-300 dark:text-stone-600 font-sans">•</span>
+              <span
+                onClick={() => setIsSessionsDrawerOpen(true)}
+                title="Clique para ver ou mudar de conversa"
+                className="hidden md:inline-block text-xs font-normal text-teal-800 dark:text-teal-300 hover:underline cursor-pointer truncate max-w-[200px]"
+              >
+                {sessions.find((s) => s.id === activeSessionId)?.title || 'Reflexão'}
+              </span>
             </h2>
             <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1.5 mt-0.5 truncate">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400 shrink-0" />
-              Mentoria ativa • Escuta atenta
+              <span>Mentoria ativa • Visão contínua da sua jornada</span>
             </p>
           </div>
         </div>
 
-        {/* BOTÕES DE CONTROLE: SOM AMBIENTE RÁPIDO & PREFERÊNCIAS */}
+        {/* BOTÕES DE CONTROLE: NOVA CONVERSA, SOM AMBIENTE, TEMA & AJUSTES */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* BOTÃO RÁPIDO: + NOVA CONVERSA */}
+          <button
+            type="button"
+            onClick={handleCreateNewSession}
+            disabled={isCreatingSession}
+            title="Abrir uma nova conversa de reflexão limpa"
+            className="px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1.5 border shadow-sm active:scale-95 min-h-[36px] bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white border-transparent cursor-pointer disabled:opacity-50"
+          >
+            {isCreatingSession ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline">Nova Reflexão</span>
+          </button>
           {/* ATIVAÇÃO OU DESATIVAÇÃO RÁPIDA DO SOM AMBIENTE */}
           <button
             type="button"
