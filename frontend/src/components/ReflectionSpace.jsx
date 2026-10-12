@@ -178,6 +178,18 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
   const [activeAgents, setActiveAgents] = useState([]);
   const [selectedAgentId, setSelectedAgentId] = useState('auto');
 
+  // Multi-Sessões de Conversa com Memória Global Unificada
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [isSessionsDrawerOpen, setIsSessionsDrawerOpen] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [editingTitleText, setEditingTitleText] = useState('');
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+
+  // Conversas Direcionadas Criadas pelo Superadmin
+  const [guidedConversations, setGuidedConversations] = useState([]);
+  const [activeGuidedTopic, setActiveGuidedTopic] = useState(null);
+
   useEffect(() => {
     fetchActiveAgents().then((list) => {
       if (Array.isArray(list) && list.length > 0) {
@@ -310,17 +322,6 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     window.dispatchEvent(new Event('storage'));
   };
 
-  // Multi-Sessões de Conversa com Memória Global Unificada
-  const [sessions, setSessions] = useState([]);
-  const [activeSessionId, setActiveSessionId] = useState(null);
-  const [isSessionsDrawerOpen, setIsSessionsDrawerOpen] = useState(false);
-  const [editingSessionId, setEditingSessionId] = useState(null);
-  const [editingTitleText, setEditingTitleText] = useState('');
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
-
-  // Conversas Direcionadas Criadas pelo Superadmin
-  const [guidedConversations, setGuidedConversations] = useState([]);
-  const [activeGuidedTopic, setActiveGuidedTopic] = useState(null);
 
   // Carregar sessões e histórico persistente do banco de dados (Supabase izaque_chat_sessions & izaque_messages)
   useEffect(() => {
