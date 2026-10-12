@@ -20,10 +20,13 @@ import {
   User,
   Cpu,
   Globe,
+  Palette,
+  Type,
 } from 'lucide-react';
 import { ambientAudio } from '../services/ambientAudioService';
 import { humanVoiceService, GEMINI_VOICES } from '../services/voiceService';
 import { updateUserProfile, fetchVoiceAudio } from '../services/api';
+import { THEMES, applyAppTheme, saveAppTheme, getCurrentTheme } from '../services/themeService';
 
 const GUIDE_NAME_SUGGESTIONS = ['Izaque', 'Mentor', 'Guia', 'Hermes', 'Sophia', 'Conselheiro'];
 
@@ -54,6 +57,18 @@ export default function UserSettingsModal({
   const [immersiveVoice, setImmersiveVoice] = useState(() => {
     return localStorage.getItem('izaque_immersive_voice') === 'true';
   });
+
+  // Tema Visual & Tipografia do App (Exclusivo a nível de usuário)
+  const [appTheme, setAppTheme] = useState(() => getCurrentTheme());
+
+  const handleThemeSelect = (themeId) => {
+    setAppTheme(themeId);
+    applyAppTheme(themeId);
+    try {
+      localStorage.setItem('izaque_app_theme', themeId);
+      window.dispatchEvent(new CustomEvent('app-theme-changed', { detail: themeId }));
+    } catch (e) {}
+  };
 
   // Tecnologia de Voz (Gemini Nativo ou Navegador Local)
   const [voiceEngine, setVoiceEngine] = useState(() => {
@@ -137,6 +152,7 @@ export default function UserSettingsModal({
           : parseFloat(localStorage.getItem('izaque_voice_pitch') || '0.95')
       );
 
+      setAppTheme(prefs.app_theme || getCurrentTheme());
       setAvailableVoices(humanVoiceService.getAvailableVoices());
     } else {
       humanVoiceService.stop();
@@ -249,6 +265,7 @@ export default function UserSettingsModal({
     // Monta o objeto universal de preferências
     const newPreferences = {
       guide_name: finalGuideName,
+      app_theme: appTheme,
       ambient_track: ambientTrack,
       ambient_volume: ambientVolume,
       ambient_enabled: isAmbientEnabled,
@@ -263,6 +280,7 @@ export default function UserSettingsModal({
     };
 
     // 1. Persiste no localStorage do dispositivo atual para acesso instantâneo
+    saveAppTheme(appTheme);
     localStorage.setItem('izaque_guide_name', finalGuideName);
     localStorage.setItem('izaque_ambient_track', ambientTrack);
     localStorage.setItem('izaque_ambient_volume', ambientVolume.toString());
@@ -408,12 +426,93 @@ export default function UserSettingsModal({
             </div>
           </div>
 
-          {/* 2. SOM AMBIENTE & FREQUÊNCIA DE CURA */}
+          {/* 2. ESTILO VISUAL, CORES & FONTES (EXCLUSIVO DO USUÁRIO) */}
+          <div className="space-y-3.5 pt-4 border-t border-stone-200/80 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400 block">
+                    2. Estilo Visual, Cores & Fontes
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/40 font-mono">
+                    4 Ambientes
+                  </span>
+                </div>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+                  Escolha as cores, contraste e tipografia que mais trazem paz para o seu momento
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {THEMES.map((theme) => {
+                const isSelected = appTheme === theme.id;
+                return (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => handleThemeSelect(theme.id)}
+                    className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden group flex flex-col justify-between ${
+                      isSelected
+                        ? 'ring-2 ring-teal-500/80 dark:ring-teal-400 border-teal-600 bg-white dark:bg-slate-800 shadow-md'
+                        : 'border-stone-200 dark:border-slate-700/80 bg-white/70 dark:bg-slate-800/60 hover:border-stone-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    {/* Top row with Icon, Name & Selection badge */}
+                    <div className="flex items-start justify-between w-full mb-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xl shrink-0">{theme.previewIcon}</span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-serif font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5 truncate">
+                            {theme.name}
+                          </div>
+                          <div className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
+                            {theme.tagline}
+                          </div>
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <span className="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-[10px] shadow-xs shrink-0 ml-1">
+                          <Check className="w-3 h-3 stroke-[2.5]" />
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mb-2.5 leading-relaxed">
+                      {theme.description}
+                    </p>
+
+                    {/* Bottom row: Font badge and color swatches */}
+                    <div className="flex items-center justify-between pt-2 border-t border-stone-100 dark:border-slate-700/50 mt-auto w-full">
+                      <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 flex items-center gap-1">
+                        <Type className="w-3 h-3 text-teal-700 dark:text-teal-400" />
+                        {theme.fontName.split(' + ')[0]}
+                      </span>
+
+                      {/* Color Swatch Dots */}
+                      <div className="flex items-center -space-x-1.5">
+                        {theme.colors.map((c, i) => (
+                          <span
+                            key={i}
+                            className="w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 shadow-xs inline-block"
+                            style={{ backgroundColor: c }}
+                            title={c}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 3. SOM AMBIENTE & FREQUÊNCIA DE CURA */}
           <div className="space-y-4 pt-4 border-t border-stone-200/80 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400 block">
-                  2. Som Ambiente Terapêutico
+                  3. Som Ambiente Terapêutico
                 </span>
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
                   Frequências restauradoras para acalmar a mente durante a conversa
@@ -499,11 +598,11 @@ export default function UserSettingsModal({
             )}
           </div>
 
-          {/* 3. MODO IMERSIVO (VOZ AUTOMÁTICA) */}
+          {/* 4. MODO IMERSIVO (VOZ AUTOMÁTICA) */}
           <div className="flex items-center justify-between pt-4 border-t border-stone-200/80 dark:border-slate-800">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400 block">
-                3. Modo Imersivo (Ouvir Sempre)
+                4. Modo Imersivo (Ouvir Sempre)
               </span>
               <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
                 Toca a voz do mentor automaticamente quando uma nova reflexão é recebida
@@ -525,12 +624,12 @@ export default function UserSettingsModal({
             </button>
           </div>
 
-          {/* 4. MOTOR DE VOZ DO MENTOR: GEMINI NATIVO VS NAVEGADOR */}
+          {/* 5. MOTOR DE VOZ DO MENTOR: GEMINI NATIVO VS NAVEGADOR */}
           <div className="space-y-4 pt-4 border-t border-stone-200/80 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-400 block">
-                  4. Voz do Mentor
+                  5. Voz do Mentor
                 </span>
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
                   Vozes neurais com emoção humana e entonação terapêutica

@@ -41,8 +41,8 @@ const frontend = spawn(npmCmd, ['run', 'dev'], {
 
 function cleanup() {
   console.log('\n🛑 Encerrando Mentoria IZAQUE...');
-  try { backend.kill(); } catch {}
-  try { frontend.kill(); } catch {}
+  try { backendProcess?.kill(); } catch {}
+  try { frontend?.kill(); } catch {}
   process.exit(0);
 }
 

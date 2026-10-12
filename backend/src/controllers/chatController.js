@@ -123,7 +123,78 @@ async function resolveAgent(agentId, userMessage, allAgents, history = []) {
     }
   }
 
-  // 4. Auto-Roteamento Inteligente via Gemini (Contexto Multi-Turno)
+  // 4. Termos de Burnout / Esgotamento / Sobrecarga / Limites (Dra. Sofia)
+  const burnoutTerms = [
+    'burnout', 'esgotamento', 'exaustão', 'exaustao', 'sobrecarga', 'sobrecarregado',
+    'sobrecarregada', 'não sei dizer não', 'nao sei dizer nao', 'cansado de tudo',
+    'cansada de tudo', 'trabalho demais', 'não aguento mais a pressão'
+  ];
+  const isBurnoutIntent = burnoutTerms.some(term => {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    return regex.test(lowerMsg);
+  });
+  if (isBurnoutIntent) {
+    const burnoutAgent = allAgents?.find(a => a.slug === 'dra-sofia-burnout' || a.type === 'burnout');
+    if (burnoutAgent) {
+      console.log(`🧭 [IZAQUE Router] Intenção de burnout/limites detectada -> Direcionado para: "${burnoutAgent.name}"`);
+      return burnoutAgent;
+    }
+  }
+
+  // 5. Termos de Luto / Perda / Término / Reconstrução (Clara)
+  const griefTerms = [
+    'luto', 'perdi alguém', 'perdi alguem', 'perdi meu', 'perdi minha', 'término', 'termino',
+    'divórcio', 'divorcio', 'fim de relacionamento', 'dor da perda', 'saudade que dói',
+    'falecimento', 'morreu'
+  ];
+  const isGriefIntent = griefTerms.some(term => {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    return regex.test(lowerMsg);
+  });
+  if (isGriefIntent) {
+    const griefAgent = allAgents?.find(a => a.slug === 'clara-luto-recomeco' || a.type === 'luto');
+    if (griefAgent) {
+      console.log(`🧭 [IZAQUE Router] Intenção de luto/término detectada -> Direcionado para: "${griefAgent.name}"`);
+      return griefAgent;
+    }
+  }
+
+  // 6. Termos de Estoicismo / Serenidade / Aceitação (Marco Aurélio)
+  const stoicTerms = [
+    'estoico', 'estoica', 'estoicismo', 'marco aurélio', 'marco aurelio', 'epicteto', 'sêneca',
+    'seneca', 'amor fati', 'fora do meu controle', 'aceitação ativa', 'serenidade estoica'
+  ];
+  const isStoicIntent = stoicTerms.some(term => {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    return regex.test(lowerMsg);
+  });
+  if (isStoicIntent) {
+    const stoicAgent = allAgents?.find(a => a.slug === 'marco-aurelio-estoico' || a.type === 'estoicismo');
+    if (stoicAgent) {
+      console.log(`🧭 [IZAQUE Router] Intenção estoica detectada -> Direcionado para: "${stoicAgent.name}"`);
+      return stoicAgent;
+    }
+  }
+
+  // 7. Termos de Síndrome do Impostor / Hesitação / Coragem (Caleb)
+  const courageTerms = [
+    'síndrome do impostor', 'sindrome do impostor', 'impostor', 'medo de arriscar',
+    'não me sinto pronto', 'nao me sinto pronto', 'me diminuir', 'medo do julgamento',
+    'hesitação', 'hesitacao', 'insegurança profissional', 'coragem para mudar'
+  ];
+  const isCourageIntent = courageTerms.some(term => {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    return regex.test(lowerMsg);
+  });
+  if (isCourageIntent) {
+    const courageAgent = allAgents?.find(a => a.slug === 'caleb-coragem' || a.type === 'coragem');
+    if (courageAgent) {
+      console.log(`🧭 [IZAQUE Router] Intenção de coragem/impostor detectada -> Direcionado para: "${courageAgent.name}"`);
+      return courageAgent;
+    }
+  }
+
+  // 8. Auto-Roteamento Inteligente via Gemini (Contexto Multi-Turno)
   if (allAgents && allAgents.length > 1) {
     try {
       const recentTurns = (history || [])
@@ -137,16 +208,30 @@ Sua função é analisar a mensagem do usuário e o contexto da conversa para de
 
 ESPECIALISTAS DA MENTORIA:
 ${allAgents.map(a => `- ID: ${a.id} | Slug: ${a.slug} | Nome: ${a.name} | Especialidade: ${a.type}
-  Foco: ${a.slug === 'renato-sobriedade' ? 'Recuperação do alcoolismo, superação de fissura, prevenção de recaída, acolhimento compassivo de ex-alcoólatra e suporte de instituições (A.A., CAPS ad, CVV 188).' : a.slug === 'pastor-joao-biblico' ? 'Bíblia Sagrada (JFA), fé em Deus, oração, versículos, angústia espiritual, colocando Deus sempre em primeiro lugar.' : a.slug === 'mentor-financeiro' ? 'Mentalidade financeira, crenças de escassez, culpa com dinheiro, precificação e prosperidade.' : a.slug === 'mentora-lideranca' ? 'Liderança, delegação, cura da centralização e medo de confiar na equipe.' : 'Reprogramação de mentalidade geral, autossabotagem, desabafos emocionais e acolhimento amplo.'}`).join('\n')}
+  Foco: ${
+    a.slug === 'renato-sobriedade' ? 'Recuperação do alcoolismo, superação de fissura, prevenção de recaída e apoio de A.A./CAPS.' :
+    a.slug === 'pastor-joao-biblico' ? 'Bíblia Sagrada (JFA), fé em Deus, oração, consolo espiritual.' :
+    a.slug === 'mentor-financeiro' ? 'Mentalidade financeira, crenças de escassez, culpa com dinheiro e prosperidade.' :
+    a.slug === 'mentora-lideranca' ? 'Liderança, delegação, cura da centralização e medo de confiar na equipe.' :
+    a.slug === 'dra-sofia-burnout' ? 'Prevenção de Burnout, exaustão, aprender a dizer não e colocar limites saudáveis.' :
+    a.slug === 'clara-luto-recomeco' ? 'Travessia do luto, términos dolorosos, separação, perda de entes queridos e reconstrução.' :
+    a.slug === 'marco-aurelio-estoico' ? 'Estoicismo, discernimento entre o que se controla e o incontrolável, serenidade.' :
+    a.slug === 'caleb-coragem' ? 'Superação da síndrome do impostor, coragem profissional e audácia para avançar.' :
+    'Reprogramação de mentalidade geral, autossabotagem, desabafos emocionais e acolhimento amplo.'
+  }`).join('\n')}
 
 ${recentTurns ? `HISTÓRICO RECENTE:\n${recentTurns}\n` : ''}
 MENSAGEM DO USUÁRIO: "${userMessage}"
 
 DIRETRIZES:
-- Se envolver álcool, alcoolismo, bebida, fissura, recaída, sobriedade, A.A., CAPS ad: selecione o especialista em sobriedade (${allAgents.find(a => a.slug === 'renato-sobriedade')?.id || 'renato-sobriedade'}).
-- Se envolver fé, Deus, versículos bíblicos, oração, desânimo da alma: selecione o especialista bíblico (${allAgents.find(a => a.slug === 'pastor-joao-biblico')?.id || 'pastor-joao-biblico'}).
-- Se envolver dinheiro, preços, culpa por ter dinheiro ou lucro: selecione o especialista financeiro.
+- Se envolver álcool, bebida, fissura, recaída: selecione o especialista em sobriedade.
+- Se envolver fé, Deus, versículos bíblicos, oração: selecione o especialista bíblico.
+- Se envolver dinheiro, preços, culpa por ter dinheiro: selecione o especialista financeiro.
 - Se envolver delegar, controle, desconfiança de equipe: selecione a especialista de liderança.
+- Se envolver exaustão, estresse crônico, burnout, dificuldade de dizer não: selecione a especialista em burnout.
+- Se envolver perda, luto, término, morte, separação: selecione a especialista em luto e recomeço.
+- Se envolver ansiedade com o incontrolável, estoicismo, controle emocional: selecione o mentor estoico.
+- Se envolver síndrome do impostor, medo de avançar, insegurança profissional: selecione o mentor de coragem.
 - Se for geral, autossabotagem, desabafo emocional amplo: selecione o IZAQUE Master (${masterAgent.id}).
 
 Retorne EXCLUSIVAMENTE o ID ou Slug do especialista escolhido. Não inclua explicações ou texto extra.`;
@@ -280,18 +365,25 @@ DIRETRIZES DO IZAQUE (OTIMIZADO PARA FALA HUMANA E ACOLHIMENTO):
 
   for (const modelCandidate of modelsToTry) {
     try {
+      const maxOutputTokens = Number(process.env.GEMINI_MAX_OUTPUT_TOKENS) || 8192;
       const model = genAI.getGenerativeModel({
         model: modelCandidate,
         systemInstruction: fullSystemInstruction,
         generationConfig: {
           temperature: Number(selectedAgent.temperature) || 0.7,
-          maxOutputTokens: 1500,
+          maxOutputTokens,
         },
       });
 
       const chatSession = model.startChat({ history: recentHistory });
       const result = await chatSession.sendMessage(message);
       replyText = result.response.text();
+
+      const candidate = result.response.candidates?.[0];
+      if (candidate?.finishReason === 'MAX_TOKENS') {
+        console.warn(`⚠️ [Gemini Chat] Aviso: Resposta atingiu o limite de tokens (${maxOutputTokens}).`);
+      }
+
       lastChatError = null;
       if (replyText) break;
     } catch (err) {

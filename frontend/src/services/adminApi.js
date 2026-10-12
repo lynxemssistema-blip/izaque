@@ -452,5 +452,51 @@ export async function uploadCreatorPhoto(file) {
   }
 }
 
+/**
+ * Consulta estatísticas de público para disparo de e-mails em massa
+ */
+export async function fetchBroadcastStats() {
+  const res = await fetch(`${BACKEND_URL}/api/admin/broadcast/stats`);
+  if (!res.ok) throw new Error('Falha ao consultar estatísticas de e-mail');
+  return await res.json();
+}
+
+/**
+ * Solicita ao Gemini para redigir o e-mail de novidades
+ */
+export async function generateBroadcastDraft({ topic, targetAudience = 'all', extraPrompt = '' }) {
+  const res = await fetch(`${BACKEND_URL}/api/admin/broadcast/draft`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topic, targetAudience, extraPrompt }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Falha ao gerar redação com IA.');
+  }
+
+  return data;
+}
+
+/**
+ * Dispara e-mail em massa para os usuários
+ */
+export async function sendBroadcastEmail({ subject, htmlContent, targetAudience = 'all', testEmail = null, callToActionText = 'Visitar Meu Refúgio Agora' }) {
+  const res = await fetch(`${BACKEND_URL}/api/admin/broadcast/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, htmlContent, targetAudience, testEmail, callToActionText }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Falha ao disparar e-mails para os usuários.');
+  }
+
+  return data;
+}
+
+
 
 

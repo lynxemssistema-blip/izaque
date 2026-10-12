@@ -25,21 +25,12 @@ import {
   Globe,
   MessageSquare,
 } from 'lucide-react';
-import { fetchPublicPlans, fetchPublicCreator } from '../services/api';
+import { fetchPublicCreator } from '../services/api';
 
-export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
-  const [plans, setPlans] = useState([]);
+export default function LandingPage({ onStartChat, user }) {
   const [creator, setCreator] = useState(null);
 
   useEffect(() => {
-    fetchPublicPlans()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setPlans(data);
-        }
-      })
-      .catch((err) => console.warn('Aviso ao carregar planos na landing:', err));
-
     fetchPublicCreator()
       .then((data) => {
         if (data) setCreator(data);
@@ -93,10 +84,10 @@ export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
           </button>
 
           <a
-            href="#planos"
+            href="#quem-e-izaque"
             className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-stone-200 font-medium text-sm transition flex items-center justify-center gap-2 shadow-sm active:scale-95"
           >
-            <span>Conhecer os Planos</span>
+            <span>Conhecer a Mentoria</span>
             <ChevronRight className="w-4 h-4 text-stone-400" />
           </a>
         </div>
@@ -502,226 +493,7 @@ export default function LandingPage({ onStartChat, user, onOpenSubscription }) {
         </div>
       </section>
 
-      {/* 4. SEÇÃO DE PLANOS & ASSINATURA (SOLICITADA PELO USUÁRIO) */}
-      <section id="planos" className="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto scroll-mt-12">
-        <div className="text-center max-w-2xl mx-auto space-y-3 mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 border border-teal-200/80 dark:border-teal-800/40 text-xs font-serif text-teal-800 dark:text-teal-300">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Planos de Mentoria & Acesso</span>
-          </div>
-          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-serif font-normal text-stone-900 dark:text-stone-50 tracking-tight">
-            Escolha como deseja caminhar
-          </h2>
-          <p className="text-xs sm:text-base text-stone-600 dark:text-stone-300 font-serif leading-relaxed">
-            Sem pressa e sem cobranças surpresas. Todos os planos contam com total sigilo, escuta respeitosa e desenvolvimento contínuo.
-          </p>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
-          {/* CARD 1: GRATUITO (DEGUSTAÇÃO / ACOLHIMENTO) */}
-          <div className="p-6 sm:p-8 rounded-3xl sm:rounded-4xl bg-white dark:bg-slate-800/60 border border-stone-200/80 dark:border-slate-700/60 shadow-sm flex flex-col justify-between hover:shadow-md transition">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                  Refúgio Inicial
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-stone-100 dark:bg-slate-700 text-stone-600 dark:text-stone-300">
-                  Gratuito
-                </span>
-              </div>
-
-              <h3 className="text-xl font-serif font-medium text-stone-900 dark:text-stone-100 mb-2">
-                Acolhimento
-              </h3>
-              <p className="text-xs text-stone-500 dark:text-stone-400 font-serif mb-6 leading-relaxed">
-                Ideal para conhecer Izaque e desfrutar de reflexões pontuais sem compromisso.
-              </p>
-
-              <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-xs text-stone-400 font-medium">R$</span>
-                <span className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 dark:text-stone-50">
-                  0
-                </span>
-                <span className="text-xs text-stone-500 dark:text-stone-400">/sempre</span>
-              </div>
-
-              <ul className="space-y-3 text-xs text-stone-600 dark:text-stone-300 mb-6">
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                  <span>Sessões iniciais para desabafar</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                  <span>Voz nativa do navegador</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                  <span>Sons essenciais (432Hz e Chuva)</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                  <span>Ambiente sigiloso e acolhedor</span>
-                </li>
-              </ul>
-            </div>
-
-            <button
-              type="button"
-              onClick={onStartChat}
-              className="w-full py-3 rounded-2xl bg-stone-200/80 hover:bg-stone-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-stone-800 dark:text-stone-100 font-medium text-xs transition active:scale-95 flex items-center justify-center gap-1.5"
-            >
-              <span>Experimentar Gratuitamente</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* CARD 2: PLANO MENSAL */}
-          {(() => {
-            const monthlyPlan = plans.find((p) => p.id === 'pro_monthly') || {
-              id: 'pro_monthly',
-              name: 'Caminho da Paz (Mensal)',
-              price: 29.9,
-              description: 'Refúgio diário com voz neural imersiva e memória profunda.',
-              features: [
-                'Conversas diárias sem restrições',
-                'Voz neural realista do Gemini (Charon e Aoede)',
-                'Memória contínua com histórico completo',
-                'Todas as frequências sonoras meditativas',
-                'Canal exclusivo de suporte direto Lynx',
-              ],
-            };
-
-            return (
-              <div className="relative p-6 sm:p-8 rounded-3xl sm:rounded-4xl bg-white dark:bg-slate-800 border-2 border-teal-700 dark:border-teal-600 shadow-xl flex flex-col justify-between transform md:-translate-y-2">
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-700 text-white shadow-sm">
-                  Mais Flexível
-                </span>
-
-                <div>
-                  <div className="flex items-center justify-between mb-4 mt-1">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300">
-                      Plano Mensal
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200">
-                      Sem fidelidade
-                    </span>
-                  </div>
-
-                  <h3 className="text-xl font-serif font-medium text-stone-900 dark:text-stone-100 mb-2">
-                    {monthlyPlan.name}
-                  </h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 font-serif mb-6 leading-relaxed">
-                    {monthlyPlan.description}
-                  </p>
-
-                  <div className="flex items-baseline gap-1 mb-6">
-                    <span className="text-xs text-stone-400 font-medium">R$</span>
-                    <span className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 dark:text-stone-50">
-                      {Number(monthlyPlan.price).toFixed(2).replace('.', ',')}
-                    </span>
-                    <span className="text-xs text-stone-500 dark:text-stone-400">/mês</span>
-                  </div>
-
-                  <ul className="space-y-3 text-xs text-stone-600 dark:text-stone-300 mb-6">
-                    {(Array.isArray(monthlyPlan.features) ? monthlyPlan.features : []).map((feat, idx) => (
-                      <li key={idx} className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onOpenSubscription && onOpenSubscription('pro_monthly')}
-                  className="w-full py-3.5 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white font-medium text-xs tracking-wide shadow-md shadow-teal-700/25 transition active:scale-95 flex items-center justify-center gap-1.5"
-                >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>Assinar Mensal via PIX</span>
-                </button>
-              </div>
-            );
-          })()}
-
-          {/* CARD 3: PLANO ANUAL */}
-          {(() => {
-            const annualPlan = plans.find((p) => p.id === 'pro_annual') || {
-              id: 'pro_annual',
-              name: 'Mentoria Plena (Anual)',
-              price: 247.0,
-              description: 'A experiência máxima de mentoria com desconto de 30% e benefícios exclusivos.',
-              features: [
-                'Tudo do Plano Mensal por 1 ano inteiro',
-                'Economia de mais de 30% no valor anual',
-                'Voz neural ilimitada para todas as reflexões',
-                'Prioridade nos modelos neurais mais rápidos',
-                'Canal de suporte e sugestões prioritário Lynx',
-              ],
-            };
-
-            return (
-              <div className="relative p-6 sm:p-8 rounded-3xl sm:rounded-4xl bg-white dark:bg-slate-800/60 border border-amber-300 dark:border-amber-800/60 shadow-sm flex flex-col justify-between hover:shadow-md transition">
-                <span className="absolute -top-3 right-6 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-600 text-white shadow-sm">
-                  ⭐ Economize 30%
-                </span>
-
-                <div>
-                  <div className="flex items-center justify-between mb-4 mt-1">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                      Plano Anual
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200">
-                      Melhor Custo
-                    </span>
-                  </div>
-
-                  <h3 className="text-xl font-serif font-medium text-stone-900 dark:text-stone-100 mb-2">
-                    {annualPlan.name}
-                  </h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 font-serif mb-6 leading-relaxed">
-                    {annualPlan.description}
-                  </p>
-
-                  <div className="flex items-baseline gap-1 mb-6">
-                    <span className="text-xs text-stone-400 font-medium">R$</span>
-                    <span className="text-3xl sm:text-4xl font-serif font-semibold text-stone-900 dark:text-stone-50">
-                      {Number(annualPlan.price).toFixed(2).replace('.', ',')}
-                    </span>
-                    <span className="text-xs text-stone-500 dark:text-stone-400">/ano</span>
-                  </div>
-
-                  <ul className="space-y-3 text-xs text-stone-600 dark:text-stone-300 mb-6">
-                    {(Array.isArray(annualPlan.features) ? annualPlan.features : []).map((feat, idx) => (
-                      <li key={idx} className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onOpenSubscription && onOpenSubscription('pro_annual')}
-                  className="w-full py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs tracking-wide shadow-md shadow-amber-600/20 transition active:scale-95 flex items-center justify-center gap-1.5"
-                >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>Assinar Anual via PIX</span>
-                </button>
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* AVISO DE ATIVAÇÃO DE ATÉ 10 MINUTOS NA LANDING */}
-        <div className="mt-8 sm:mt-10 p-4 rounded-2xl sm:rounded-3xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 max-w-2xl mx-auto flex items-center gap-3 text-center sm:text-left text-xs text-amber-900 dark:text-amber-200 leading-relaxed justify-center">
-          <Clock className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0 hidden sm:block" />
-          <span>
-            ⏳ <strong>Informação importante:</strong> Os pagamentos são processados exclusivamente via <strong>PIX</strong>. A ativação do plano pode demorar <strong>até 10 minutos</strong> após a realização do pagamento para liberação pelo sistema.
-          </span>
-        </div>
-      </section>
 
       {/* 5. CONVITE FINAL DE ENTRADA NA MENTORIA */}
       <section className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">

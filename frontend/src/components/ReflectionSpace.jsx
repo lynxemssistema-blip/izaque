@@ -23,6 +23,8 @@ import {
   Coffee,
   Loader2,
   ArrowLeft,
+  Palette,
+  X,
 } from 'lucide-react';
 import {
   sendChatMessage,
@@ -36,6 +38,7 @@ import {
 } from '../services/api';
 import { ambientAudio } from '../services/ambientAudioService';
 import { humanVoiceService } from '../services/voiceService';
+import { THEMES, saveAppTheme, getCurrentTheme } from '../services/themeService';
 import UserSettingsModal from './UserSettingsModal';
 
 /**
@@ -197,6 +200,33 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     handleSendReflection(null, questionText);
   };
 
+  const [showStarterQuestions, setShowStarterQuestions] = useState(() => {
+    return localStorage.getItem('izaque_show_starters') !== 'false';
+  });
+
+  const [starterQuestionIndex, setStarterQuestionIndex] = useState(0);
+
+  const handleNextStarterQuestions = () => {
+    setStarterQuestionIndex((prev) => (prev + 2 >= currentStarterQuestions.length ? 0 : prev + 2));
+  };
+
+  const displayedQuestions = React.useMemo(() => {
+    if (!currentStarterQuestions || currentStarterQuestions.length === 0) return [];
+    const start = starterQuestionIndex % currentStarterQuestions.length;
+    const slice = currentStarterQuestions.slice(start, start + 2);
+    if (slice.length < 2 && currentStarterQuestions.length > 1) {
+      slice.push(currentStarterQuestions[0]);
+    }
+    return slice;
+  }, [currentStarterQuestions, starterQuestionIndex]);
+
+  const handleToggleStarterQuestions = (val) => {
+    setShowStarterQuestions(val);
+    try {
+      localStorage.setItem('izaque_show_starters', val ? 'true' : 'false');
+    } catch (e) {}
+  };
+
   // Estado e Controle Rápido do Som Ambiente Terapêutico
   const [isAmbientActive, setIsAmbientActive] = useState(() => {
     return localStorage.getItem('izaque_ambient_enabled') === 'true';
@@ -205,15 +235,27 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     return localStorage.getItem('izaque_ambient_track') || '432hz';
   });
 
-  // Sincroniza em tempo real se o som ambiente for alterado no modal ou em outra aba
+  // Tema Visual e Menu Rápido de Estilos
+  const [currentTheme, setCurrentTheme] = useState(() => getCurrentTheme());
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+
+  // Sincroniza em tempo real se o som ambiente ou tema for alterado
   useEffect(() => {
     const syncAmbient = () => {
       const enabled = localStorage.getItem('izaque_ambient_enabled') === 'true';
       setIsAmbientActive(enabled);
       setAmbientTrack(localStorage.getItem('izaque_ambient_track') || '432hz');
     };
+    const handleThemeEvent = (e) => {
+      if (e.detail) setCurrentTheme(e.detail);
+    };
+
     window.addEventListener('storage', syncAmbient);
-    return () => window.removeEventListener('storage', syncAmbient);
+    window.addEventListener('app-theme-changed', handleThemeEvent);
+    return () => {
+      window.removeEventListener('storage', syncAmbient);
+      window.removeEventListener('app-theme-changed', handleThemeEvent);
+    };
   }, []);
 
   const handleToggleAmbientQuick = () => {
@@ -796,6 +838,87 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
             )}
           </button>
 
+          {/* SELETOR RÁPIDO DE TEMA VISUAL */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsThemeMenuOpen((prev) => !prev)}
+              title={`Mudar Estilo Visual do Refúgio (Atual: ${THEMES.find((t) => t.id === currentTheme)?.name || 'Esmeralda'})`}
+              className={`p-2 sm:px-3 sm:py-1.5 rounded-full bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-600 dark:text-stone-300 text-xs font-medium transition flex items-center gap-1.5 border shadow-sm active:scale-95 min-h-[36px] min-w-[36px] justify-center ${
+                isThemeMenuOpen ? 'border-teal-600 ring-2 ring-teal-500/30' : 'border-stone-200 dark:border-slate-700'
+              }`}
+            >
+              <Palette className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+              <span className="hidden sm:inline text-[11px]">
+                {THEMES.find((t) => t.id === currentTheme)?.name.split(' ')[1] || 'Tema'}
+              </span>
+            </button>
+
+            {/* POPOVER FLUTUANTE DE TEMAS */}
+            <AnimatePresence>
+              {isThemeMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIsThemeMenuOpen(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-56 p-2 rounded-2xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 shadow-2xl z-40 space-y-1 text-stone-800 dark:text-stone-100"
+                  >
+                    <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                      Estilos Visuais
+                    </div>
+                    {THEMES.map((t) => {
+                      const isSelected = currentTheme === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            saveAppTheme(t.id);
+                            setCurrentTheme(t.id);
+                            setIsThemeMenuOpen(false);
+                            if (user?.id) {
+                              updateUserProfile(user.id, {
+                                preferences: {
+                                  ...(user.preferences || {}),
+                                  app_theme: t.id,
+                                },
+                              }).catch(() => {});
+                            }
+                          }}
+                          className={`w-full px-2.5 py-2 rounded-xl text-left text-xs transition flex items-center justify-between gap-2 ${
+                            isSelected
+                              ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 font-semibold'
+                              : 'hover:bg-stone-100 dark:hover:bg-slate-700/60 text-stone-700 dark:text-stone-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">{t.previewIcon}</span>
+                            <div className="min-w-0 truncate">
+                              <span className="block truncate text-xs">{t.name}</span>
+                              <span className="block truncate text-[10px] text-stone-400 font-normal">
+                                {t.tagline}
+                              </span>
+                            </div>
+                          </div>
+                          <div
+                            className="w-3.5 h-3.5 rounded-full shrink-0 border border-white/50 shadow-xs"
+                            style={{ backgroundColor: t.accent }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* BOTÃO DE PREFERÊNCIAS COMPLETAS */}
           <button
             type="button"
@@ -953,33 +1076,74 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         {/* PERGUNTAS PRONTAS DE CONDUÇÃO DO MENTOR */}
         {!isRecording && currentStarterQuestions.length > 0 && (
           <div className="mb-2 px-1">
-            <div className="flex items-center justify-between mb-1.5 px-0.5">
-              <span className="text-[11px] font-serif text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-                <span className="font-medium">
-                  {activeAgent ? `Perguntas sugeridas por ${activeAgent.name}` : 'Perguntas sugeridas para conduzir sua reflexão'}:
-                </span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
-              {currentStarterQuestions.map((q) => (
-                <button
-                  key={q.id || q.text}
-                  type="button"
-                  onClick={() => handleSelectStarterQuestion(q.text)}
-                  disabled={isReflecting}
-                  title={`Conduzir: "${q.text}"`}
-                  className="shrink-0 text-left px-3 py-1.5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/60 text-stone-700 dark:text-stone-200 border border-stone-200/90 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-600 text-xs font-serif transition-all shadow-2xs hover:shadow-xs active:scale-95 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                >
-                  {q.category && (
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-teal-50 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 font-semibold border border-teal-200/60 dark:border-teal-800/40 shrink-0">
-                      {q.category}
+            {showStarterQuestions ? (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between px-0.5">
+                  <span className="text-[11px] font-serif text-stone-500 dark:text-stone-400 flex items-center gap-1.5 truncate">
+                    <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                    <span className="font-medium truncate">
+                      {activeAgent ? `Sugestões de ${activeAgent.name.split(' - ')[0]}` : 'Perguntas sugeridas para conduzir sua reflexão'}:
                     </span>
-                  )}
-                  <span className="truncate max-w-[240px] sm:max-w-md">{q.text}</span>
+                  </span>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {currentStarterQuestions.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={handleNextStarterQuestions}
+                        title="Ver outras perguntas sugeridas"
+                        className="text-[10px] text-teal-700 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 transition flex items-center gap-1 font-serif px-2 py-0.5 rounded-full hover:bg-stone-200/50 dark:hover:bg-slate-800 border border-teal-600/20 dark:border-teal-400/20"
+                      >
+                        <span>Outras</span>
+                        <span className="text-xs">↻</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStarterQuestions(false)}
+                      title="Ocultar sugestões para liberar espaço"
+                      className="p-1 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-slate-800 transition"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grade 100% Responsiva: 1 por linha no celular, 2 no tablet/desktop, sem nenhum corte de tela ou texto */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {displayedQuestions.map((q) => (
+                    <button
+                      key={q.id || q.text}
+                      type="button"
+                      onClick={() => handleSelectStarterQuestion(q.text)}
+                      disabled={isReflecting}
+                      title={`Conduzir reflexão: "${q.text}"`}
+                      className="w-full text-left p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/60 text-stone-800 dark:text-stone-100 border border-stone-200/90 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-600 transition-all shadow-2xs hover:shadow-xs active:scale-[0.99] flex items-start gap-2.5 disabled:opacity-50 cursor-pointer"
+                    >
+                      {q.category && (
+                        <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 font-semibold border border-teal-200/60 dark:border-teal-800/40 shrink-0 mt-0.5 tracking-wide">
+                          {q.category}
+                        </span>
+                      )}
+                      <span className="text-xs font-serif leading-relaxed text-stone-700 dark:text-stone-200 flex-1 break-words">
+                        {q.text}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between py-0.5 px-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleToggleStarterQuestions(true)}
+                  className="text-[11px] font-serif text-teal-700 dark:text-teal-400 hover:underline flex items-center gap-1.5 opacity-85 hover:opacity-100 transition py-0.5"
+                >
+                  <Sparkles className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                  <span>Ver perguntas sugeridas de reflexão</span>
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
 

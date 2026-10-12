@@ -1,6 +1,11 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import { genAI, CHAT_MODEL, FALLBACK_CHAT_MODELS } from '../config/gemini.js';
-import { sendSubscriptionApprovedNotification } from '../services/emailService.js';
+import {
+  sendSubscriptionApprovedNotification,
+  generateBroadcastEmailDraft,
+  sendBroadcastEmail,
+  renderBroadcastEmailHtml,
+} from '../services/emailService.js';
 
 /**
  * Controller Administrativo (Exclusivo para Super Admin / Master)
@@ -643,5 +648,117 @@ export async function updateAdminCreator(req, res) {
     res.status(500).json({ error: 'Falha ao salvar dados do idealizador.', details: error.message });
   }
 }
+
+/**
+ * 23. Solicita ao Gemini para redigir o e-mail de novidades detalhista e humanizado
+ * POST /api/admin/broadcast/draft
+ */
+export async function generateBroadcastDraftController(req, res) {
+  try {
+    const { topic, targetAudience = 'all', extraPrompt = '' } = req.body;
+    console.log('✍️ [Admin Broadcast] Solicitando ao Gemini redação do e-mail de novidades...');
+
+    const draft = await generateBroadcastEmailDraft({
+      topic,
+      targetAudience,
+      extraPrompt,
+    });
+
+    const appUrl = (process.env.APP_URL || 'https://izaque.lynxems.com.br').replace(/\/$/, '');
+    const previewHtml = renderBroadcastEmailHtml({
+      contentHtml: draft.bodyHtml,
+      userName: 'Viajante',
+      appUrl,
+      callToActionText: draft.callToActionText || 'Visitar Meu Refúgio Agora',
+    });
+
+    res.status(200).json({
+      success: true,
+      draft,
+      previewHtml,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao gerar rascunho de e-mail com IA:', error);
+    res.status(500).json({
+      error: 'Erro ao redigir e-mail com IA.',
+      details: error.message,
+    });
+  }
+}
+
+/**
+ * 24. Estatísticas de público para envio em massa
+ * GET /api/admin/broadcast/stats
+ */
+export async function getBroadcastStatsController(req, res) {
+  try {
+    const { data: users, error } = await supabaseAdmin
+      .from('izaque_profiles')
+      .select('id, email, plan_id, is_active')
+      .not('email', 'is', null)
+      .neq('is_active', false);
+
+    if (error) throw error;
+
+    const validUsers = (users || []).filter(u => u.email && u.email.includes('@'));
+    const totalUsers = validUsers.length;
+    const subscribers = validUsers.filter(u => u.plan_id && u.plan_id !== 'free').length;
+    const freeUsers = validUsers.filter(u => !u.plan_id || u.plan_id === 'free').length;
+
+    res.status(200).json({
+      totalUsers,
+      subscribers,
+      freeUsers,
+      smtpUser: process.env.SMTP_USER || 'suporte@lynxems.com.br',
+      smtpHost: process.env.SMTP_HOST || 'smtp.hostinger.com',
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar estatísticas de público para e-mail:', error);
+    res.status(500).json({ error: 'Falha ao buscar estatísticas de e-mail.', details: error.message });
+  }
+}
+
+/**
+ * 25. Disparo oficial do e-mail em massa para os usuários
+ * POST /api/admin/broadcast/send
+ */
+export async function sendBroadcastMessageController(req, res) {
+  try {
+    const {
+      subject,
+      htmlContent,
+      callToActionText = 'Visitar Meu Refúgio Agora',
+      targetAudience = 'all',
+      testEmail = null,
+    } = req.body;
+
+    if (!subject || !subject.trim()) {
+      return res.status(400).json({ error: 'O assunto do e-mail é obrigatório.' });
+    }
+
+    if (!htmlContent || !htmlContent.trim()) {
+      return res.status(400).json({ error: 'O conteúdo da mensagem é obrigatório.' });
+    }
+
+    console.log(`🚀 [Admin Broadcast] Iniciando disparo de e-mail (Público: ${targetAudience})...`);
+
+    const result = await sendBroadcastEmail({
+      subject: subject.trim(),
+      htmlContent: htmlContent.trim(),
+      callToActionText: callToActionText?.trim() || 'Visitar Meu Refúgio Agora',
+      targetAudience,
+      testEmail,
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('❌ Erro no disparo de broadcast de e-mail:', error);
+    res.status(500).json({
+      error: 'Falha ao disparar e-mails para os usuários.',
+      details: error.message,
+    });
+  }
+}
+
 
 

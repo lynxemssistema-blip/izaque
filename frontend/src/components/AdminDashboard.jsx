@@ -32,6 +32,7 @@ import {
   Camera,
   Loader2,
   Edit3,
+  Mail,
 } from 'lucide-react';
 import {
   fetchAdminMetrics,
@@ -55,9 +56,10 @@ import {
 import CreateAgentModal from './CreateAgentModal';
 import AgentKnowledgeManager from './AgentKnowledgeManager';
 import AdminHelpGuide from './AdminHelpGuide';
+import AdminBroadcastEmail from './AdminBroadcastEmail';
 
 export default function AdminDashboard({ currentUser }) {
-  const [activeTab, setActiveTab] = useState('metrics'); // 'users' | 'plans' | 'subscriptions' | 'feedbacks' | 'memories' | 'agents' | 'help'
+  const [activeTab, setActiveTab] = useState('metrics'); // 'users' | 'plans' | 'subscriptions' | 'feedbacks' | 'memories' | 'agents' | 'help' | 'broadcast'
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isCreateAgentOpen, setIsCreateAgentOpen] = useState(false);
@@ -577,6 +579,18 @@ export default function AdminDashboard({ currentUser }) {
             >
               <Award className="w-3.5 h-3.5" />
               Idealizador do IZAQUE
+            </button>
+
+            <button
+              onClick={() => setActiveTab('broadcast')}
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'broadcast'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              Comunicação & E-mails
             </button>
 
             <button
@@ -1705,6 +1719,11 @@ export default function AdminDashboard({ currentUser }) {
         {/* ABA 7: GUIA E MANUAL DO ADMINISTRADOR */}
         {activeTab === 'help' && (
           <AdminHelpGuide />
+        )}
+
+        {/* ABA 8: COMUNICAÇÃO & E-MAILS EM MASSA */}
+        {activeTab === 'broadcast' && (
+          <AdminBroadcastEmail currentUser={currentUser} />
         )}
 
         {/* MODAL PARA CRIAR AGENTE */}

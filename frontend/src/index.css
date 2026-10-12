@@ -96,3 +96,332 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.35);
 }
+
+/* ==========================================================================
+   SISTEMA DE TEMAS VISUAIS DINÂMICOS DA MENTORIA IZAQUE
+   Temas:
+   1. .theme-emerald    — Santuário Esmeralda (Padrão)
+   2. .theme-gold       — Refúgio Ouro & Obsidiana
+   3. .theme-indigo     — Brisa Índigo & Oceano
+   4. .theme-terracotta — Areia de Seda & Terracota
+   ========================================================================== */
+
+/* Suavidade na transição de temas */
+body, #root, header, nav, main, aside, div, button {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 250ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --------------------------------------------------------------------------
+   TEMA 2: REFÚGIO OURO & OBSIDIANA (.theme-gold)
+   -------------------------------------------------------------------------- */
+html.theme-gold h1,
+html.theme-gold h2,
+html.theme-gold h3,
+html.theme-gold .font-serif {
+  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif !important;
+  letter-spacing: -0.01em;
+}
+
+/* Fundos Dark Mode */
+html.theme-gold.dark body,
+html.theme-gold.dark #root,
+html.theme-gold.dark .bg-slate-900,
+html.theme-gold.dark [class*="dark:bg-slate-900"] {
+  background-color: #090a0f !important;
+}
+
+html.theme-gold.dark .bg-slate-800,
+html.theme-gold.dark [class*="dark:bg-slate-800"] {
+  background-color: #121622 !important;
+}
+
+html.theme-gold.dark [class*="dark:bg-slate-700"],
+html.theme-gold.dark [class*="dark:hover:bg-slate-700"]:hover {
+  background-color: #1a1f30 !important;
+}
+
+html.theme-gold.dark [class*="dark:border-slate-800"],
+html.theme-gold.dark [class*="dark:border-slate-700"] {
+  border-color: rgba(212, 175, 55, 0.18) !important;
+}
+
+/* Botões e Elementos Primários */
+html.theme-gold [class*="bg-teal-700"],
+html.theme-gold [class*="bg-teal-600"],
+html.theme-gold [class*="dark:bg-teal-600"] {
+  background-color: #d4af37 !important;
+  color: #090a0f !important;
+}
+
+html.theme-gold [class*="hover:bg-teal-800"]:hover,
+html.theme-gold [class*="dark:hover:bg-teal-500"]:hover {
+  background-color: #b89728 !important;
+}
+
+html.theme-gold [class*="text-teal-800"],
+html.theme-gold [class*="text-teal-700"],
+html.theme-gold [class*="text-teal-600"],
+html.theme-gold [class*="dark:text-teal-400"],
+html.theme-gold [class*="dark:text-teal-300"],
+html.theme-gold [class*="dark:text-teal-200"] {
+  color: #e5c358 !important;
+}
+
+/* Badges e fundos translúcidos */
+html.theme-gold [class*="bg-teal-700/10"],
+html.theme-gold [class*="bg-teal-50"],
+html.theme-gold [class*="dark:bg-teal-500/15"],
+html.theme-gold [class*="dark:bg-teal-500/20"],
+html.theme-gold [class*="dark:bg-teal-950"] {
+  background-color: rgba(212, 175, 55, 0.12) !important;
+}
+
+html.theme-gold [class*="border-teal-700/20"],
+html.theme-gold [class*="border-teal-400"],
+html.theme-gold [class*="border-teal-200"],
+html.theme-gold [class*="dark:border-teal-500"],
+html.theme-gold [class*="dark:border-teal-700"],
+html.theme-gold [class*="dark:border-teal-800"] {
+  border-color: rgba(212, 175, 55, 0.32) !important;
+}
+
+/* Balão do usuário no chat */
+html.theme-gold .bg-teal-700.text-white {
+  background-color: #d4af37 !important;
+  color: #090a0f !important;
+}
+html.theme-gold .bg-teal-700.text-white [class*="text-teal-100"],
+html.theme-gold .bg-teal-700.text-white [class*="text-teal-200"] {
+  color: rgba(9, 10, 15, 0.75) !important;
+}
+html.theme-gold .bg-teal-700.text-white [class*="border-teal-600"] {
+  border-color: rgba(9, 10, 15, 0.2) !important;
+}
+html.theme-gold .bg-teal-700.text-white [class*="bg-teal-800"] {
+  background-color: rgba(9, 10, 15, 0.15) !important;
+  border-color: rgba(9, 10, 15, 0.25) !important;
+}
+
+/* Seleção e Glow */
+html.theme-gold ::selection {
+  background-color: rgba(212, 175, 55, 0.25) !important;
+  color: #faf5ee !important;
+}
+
+/* Light mode Gold */
+html.theme-gold:not(.dark) body,
+html.theme-gold:not(.dark) #root,
+html.theme-gold:not(.dark) .bg-stone-50 {
+  background-color: #faf8f0 !important;
+}
+html.theme-gold:not(.dark) .border-stone-200 {
+  border-color: rgba(184, 151, 40, 0.22) !important;
+}
+
+/* --------------------------------------------------------------------------
+   TEMA 3: BRISA ÍNDIGO & OCEANO (.theme-indigo)
+   -------------------------------------------------------------------------- */
+html.theme-indigo body {
+  font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif !important;
+}
+
+/* Fundos Dark Mode */
+html.theme-indigo.dark body,
+html.theme-indigo.dark #root,
+html.theme-indigo.dark .bg-slate-900,
+html.theme-indigo.dark [class*="dark:bg-slate-900"] {
+  background-color: #060d1b !important;
+}
+
+html.theme-indigo.dark .bg-slate-800,
+html.theme-indigo.dark [class*="dark:bg-slate-800"] {
+  background-color: #0d172e !important;
+}
+
+html.theme-indigo.dark [class*="dark:bg-slate-700"],
+html.theme-indigo.dark [class*="dark:hover:bg-slate-700"]:hover {
+  background-color: #152244 !important;
+}
+
+html.theme-indigo.dark [class*="dark:border-slate-800"],
+html.theme-indigo.dark [class*="dark:border-slate-700"] {
+  border-color: rgba(56, 189, 248, 0.18) !important;
+}
+
+/* Botões e Elementos Primários */
+html.theme-indigo [class*="bg-teal-700"],
+html.theme-indigo [class*="bg-teal-600"],
+html.theme-indigo [class*="dark:bg-teal-600"] {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+html.theme-indigo [class*="hover:bg-teal-800"]:hover,
+html.theme-indigo [class*="dark:hover:bg-teal-500"]:hover {
+  background-color: #0369a1 !important;
+}
+
+html.theme-indigo [class*="text-teal-800"],
+html.theme-indigo [class*="text-teal-700"],
+html.theme-indigo [class*="text-teal-600"],
+html.theme-indigo [class*="dark:text-teal-400"],
+html.theme-indigo [class*="dark:text-teal-300"],
+html.theme-indigo [class*="dark:text-teal-200"] {
+  color: #38bdf8 !important;
+}
+
+/* Badges e fundos translúcidos */
+html.theme-indigo [class*="bg-teal-700/10"],
+html.theme-indigo [class*="bg-teal-50"],
+html.theme-indigo [class*="dark:bg-teal-500/15"],
+html.theme-indigo [class*="dark:bg-teal-500/20"],
+html.theme-indigo [class*="dark:bg-teal-950"] {
+  background-color: rgba(56, 189, 248, 0.12) !important;
+}
+
+html.theme-indigo [class*="border-teal-700/20"],
+html.theme-indigo [class*="border-teal-400"],
+html.theme-indigo [class*="border-teal-200"],
+html.theme-indigo [class*="dark:border-teal-500"],
+html.theme-indigo [class*="dark:border-teal-700"],
+html.theme-indigo [class*="dark:border-teal-800"] {
+  border-color: rgba(56, 189, 248, 0.32) !important;
+}
+
+/* Balão do usuário no chat */
+html.theme-indigo .bg-teal-700.text-white {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+html.theme-indigo .bg-teal-700.text-white [class*="text-teal-100"] {
+  color: #bae6fd !important;
+}
+html.theme-indigo .bg-teal-700.text-white [class*="border-teal-600"] {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+html.theme-indigo .bg-teal-700.text-white [class*="bg-teal-800"] {
+  background-color: rgba(3, 105, 161, 0.6) !important;
+}
+
+/* Seleção e Glow */
+html.theme-indigo ::selection {
+  background-color: rgba(56, 189, 248, 0.25) !important;
+  color: #ffffff !important;
+}
+
+/* Light mode Indigo */
+html.theme-indigo:not(.dark) body,
+html.theme-indigo:not(.dark) #root,
+html.theme-indigo:not(.dark) .bg-stone-50 {
+  background-color: #f0f5fa !important;
+}
+html.theme-indigo:not(.dark) .border-stone-200 {
+  border-color: rgba(2, 132, 199, 0.18) !important;
+}
+
+/* --------------------------------------------------------------------------
+   TEMA 4: AREIA DE SEDA & TERRACOTA (.theme-terracotta)
+   -------------------------------------------------------------------------- */
+html.theme-terracotta h1,
+html.theme-terracotta h2,
+html.theme-terracotta h3,
+html.theme-terracotta .font-serif {
+  font-family: 'Lora', 'Playfair Display', Georgia, serif !important;
+}
+
+/* Fundos Dark Mode */
+html.theme-terracotta.dark body,
+html.theme-terracotta.dark #root,
+html.theme-terracotta.dark .bg-slate-900,
+html.theme-terracotta.dark [class*="dark:bg-slate-900"] {
+  background-color: #13100e !important;
+}
+
+html.theme-terracotta.dark .bg-slate-800,
+html.theme-terracotta.dark [class*="dark:bg-slate-800"] {
+  background-color: #1e1815 !important;
+}
+
+html.theme-terracotta.dark [class*="dark:bg-slate-700"],
+html.theme-terracotta.dark [class*="dark:hover:bg-slate-700"]:hover {
+  background-color: #2b231f !important;
+}
+
+html.theme-terracotta.dark [class*="dark:border-slate-800"],
+html.theme-terracotta.dark [class*="dark:border-slate-700"] {
+  border-color: rgba(200, 106, 80, 0.22) !important;
+}
+
+/* Botões e Elementos Primários */
+html.theme-terracotta [class*="bg-teal-700"],
+html.theme-terracotta [class*="bg-teal-600"],
+html.theme-terracotta [class*="dark:bg-teal-600"] {
+  background-color: #c86a50 !important;
+  color: #ffffff !important;
+}
+
+html.theme-terracotta [class*="hover:bg-teal-800"]:hover,
+html.theme-terracotta [class*="dark:hover:bg-teal-500"]:hover {
+  background-color: #ad553c !important;
+}
+
+html.theme-terracotta [class*="text-teal-800"],
+html.theme-terracotta [class*="text-teal-700"],
+html.theme-terracotta [class*="text-teal-600"],
+html.theme-terracotta [class*="dark:text-teal-400"],
+html.theme-terracotta [class*="dark:text-teal-300"],
+html.theme-terracotta [class*="dark:text-teal-200"] {
+  color: #e88d74 !important;
+}
+
+/* Badges e fundos translúcidos */
+html.theme-terracotta [class*="bg-teal-700/10"],
+html.theme-terracotta [class*="bg-teal-50"],
+html.theme-terracotta [class*="dark:bg-teal-500/15"],
+html.theme-terracotta [class*="dark:bg-teal-500/20"],
+html.theme-terracotta [class*="dark:bg-teal-950"] {
+  background-color: rgba(200, 106, 80, 0.14) !important;
+}
+
+html.theme-terracotta [class*="border-teal-700/20"],
+html.theme-terracotta [class*="border-teal-400"],
+html.theme-terracotta [class*="border-teal-200"],
+html.theme-terracotta [class*="dark:border-teal-500"],
+html.theme-terracotta [class*="dark:border-teal-700"],
+html.theme-terracotta [class*="dark:border-teal-800"] {
+  border-color: rgba(200, 106, 80, 0.35) !important;
+}
+
+/* Balão do usuário no chat */
+html.theme-terracotta .bg-teal-700.text-white {
+  background-color: #c86a50 !important;
+  color: #ffffff !important;
+}
+html.theme-terracotta .bg-teal-700.text-white [class*="text-teal-100"] {
+  color: #fed7aa !important;
+}
+html.theme-terracotta .bg-teal-700.text-white [class*="border-teal-600"] {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+html.theme-terracotta .bg-teal-700.text-white [class*="bg-teal-800"] {
+  background-color: rgba(173, 85, 60, 0.6) !important;
+}
+
+/* Seleção e Glow */
+html.theme-terracotta ::selection {
+  background-color: rgba(200, 106, 80, 0.3) !important;
+  color: #ffffff !important;
+}
+
+/* Light mode Terracotta */
+html.theme-terracotta:not(.dark) body,
+html.theme-terracotta:not(.dark) #root,
+html.theme-terracotta:not(.dark) .bg-stone-50 {
+  background-color: #faf5ee !important;
+}
+html.theme-terracotta:not(.dark) .border-stone-200 {
+  border-color: rgba(200, 106, 80, 0.2) !important;
+}
+

@@ -21,6 +21,9 @@ import {
   getAdminFeedbacks,
   getAdminCreator,
   updateAdminCreator,
+  generateBroadcastDraftController,
+  getBroadcastStatsController,
+  sendBroadcastMessageController,
 } from '../controllers/adminController.js';
 
 const router = Router();
@@ -52,6 +55,11 @@ router.get('/admin/feedbacks', getAdminFeedbacks);
 // Gestão do Perfil do Idealizador (Superadmin)
 router.get('/admin/creator', getAdminCreator);
 router.put('/admin/creator', updateAdminCreator);
+
+// Comunicação & E-mails em Massa (Superadmin)
+router.post('/admin/broadcast/draft', generateBroadcastDraftController);
+router.get('/admin/broadcast/stats', getBroadcastStatsController);
+router.post('/admin/broadcast/send', sendBroadcastMessageController);
 
 export default router;
 

@@ -176,7 +176,7 @@ export default function SubscriberFeedbackModal({ isOpen, onClose, user, profile
                 required
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Ex: Sugestão para novas faixas sonoras ou dúvida sobre o plano"
+                placeholder="Ex: Sugestão para novas faixas sonoras ou melhorias"
                 className="w-full px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 focus:border-teal-700 text-xs text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none transition"
               />
             </div>

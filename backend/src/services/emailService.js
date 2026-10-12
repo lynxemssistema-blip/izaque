@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { genAI, CHAT_MODEL, FALLBACK_CHAT_MODELS } from '../config/gemini.js';
+import { supabaseAdmin } from '../config/supabase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envCandidates = [
@@ -336,5 +338,239 @@ ${message}
   }
 
   return info;
+}
+
+/**
+ * Solicita ao Gemini para redigir um e-mail de novidades detalhista, educado e profundamente humanizado
+ */
+export async function generateBroadcastEmailDraft({ topic, targetAudience = 'all', extraPrompt = '' }) {
+  const modelsToTry = [CHAT_MODEL, ...(FALLBACK_CHAT_MODELS || [])].filter((m, i, arr) => arr.indexOf(m) === i);
+
+  const defaultTopic = `Novidades e melhorias recentes no aplicativo IZAQUE:
+1. Chegada de 4 novos mentores especialistas para acolher sua jornada:
+   - Marco Aurélio (Resiliência & Serenidade Estoica para lidar com o que não podemos controlar)
+   - Clara (Travessia do Luto, Términos Difíceis e Reconstrução Existencial)
+   - Dra. Sofia (Prevenção de Burnout, Exaustão e a Arte de Dizer Não com Paz)
+   - Caleb (Coragem Profissional e Superação da Síndrome do Impostor)
+2. Síntese de Voz neural humanizada estendida, sem cortes nas falas longas, com cadência mansa e reflexiva.
+3. RAG de Memória de Longo Prazo aprimorado para recordar e valorizar a evolução de cada mentorado.
+4. Refúgio acolhedor com atendimento e suporte atencioso da equipe Lynx EMS.`;
+
+  const chosenTopic = (topic && topic.trim().length > 0) ? topic.trim() : defaultTopic;
+
+  const prompt = `Você é o redator sênior de comunicação e acolhimento humano da Mentoria IZAQUE e da Equipe Lynx EMS.
+Sua missão é escrever um e-mail oficial de novidades para os usuários cadastrados no aplicativo IZAQUE.
+
+DIRETRIZES ESSENCIAIS DE COMUNICAÇÃO:
+1. SEJA DETALHISTA: Explique com riqueza de detalhes cada novidade, o propósito ético de cada melhoria e como isso acolhe o usuário na prática.
+2. EXTREMAMENTE EDUCADO E POLIDO: Trate o usuário com reverência, elegância, respeito e gentileza.
+3. HUMANIZADO AO MÁXIMO: O tom NÃO pode parecer marketing frio, spam de vendas ou anúncio superficial. Deve parecer uma carta de acolhimento escrita com carinho e presença viva.
+4. PERSONALIZAÇÃO: Use a tag {{nome}} no início para saudação individual (ex: "Olá, {{nome}}...").
+5. ASSINATURA OBRIGATÓRIA: O texto deve concluir homenageando a jornada do usuário e preparando a assinatura da "Equipe Lynx EMS & Mentoria IZAQUE".
+
+NOVIDADES A COMUNICAR:
+${chosenTopic}
+
+${extraPrompt ? `INSTRUÇÕES ADICIONAIS DO ADMINISTRADOR:\n${extraPrompt}\n` : ''}
+
+RETORNE EXCLUSIVAMENTE UM OBJETO JSON VÁLIDO (sem fences markdown extras fora do JSON):
+{
+  "subject": "Assunto cativante, elegante e acolhedor (com emoji suave no início)",
+  "previewText": "Frase curta de visualização para a caixa de entrada (máx 90 caracteres)",
+  "bodyHtml": "Conteúdo completo em HTML limpo usando tags <p>, <h3>, <strong> e <em>. Não inclua a tag <html> ou <body>, apenas o conteúdo interno dos parágrafos.",
+  "callToActionText": "Texto do botão principal (ex: Visitar Meu Refúgio Agora)"
+}`;
+
+  let parsed = null;
+  let lastErr = null;
+
+  for (const modelCandidate of modelsToTry) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelCandidate,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        },
+      });
+
+      const res = await model.generateContent(prompt);
+      let text = res.response.text().trim();
+      text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+      parsed = JSON.parse(text);
+      if (parsed?.subject && parsed?.bodyHtml) break;
+    } catch (e) {
+      lastErr = e;
+      console.warn(`⚠️ [Broadcast Draft] Falha com modelo ${modelCandidate}:`, e.message);
+    }
+  }
+
+  if (!parsed || !parsed.subject) {
+    throw lastErr || new Error('Não foi possível gerar a redação com a IA.');
+  }
+
+  return parsed;
+}
+
+/**
+ * Envelopa o conteúdo no layout HTML oficial do IZAQUE com a assinatura da Equipe Lynx EMS
+ */
+export function renderBroadcastEmailHtml({ contentHtml, userName, appUrl = 'https://izaque.lynxems.com.br', callToActionText = 'Acessar o IZAQUE' }) {
+  const safeName = userName ? userName.split(' ')[0] : 'Viajante';
+  const personalizedContent = (contentHtml || '')
+    .replace(/\{\{nome\}\}/gi, safeName)
+    .replace(/\{\{name\}\}/gi, safeName);
+
+  return `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 620px; margin: 0 auto; background-color: #faf9f6; padding: 36px 20px; border-radius: 28px; border: 1px solid #e7e5e4; color: #292524; line-height: 1.65;">
+      <!-- CABEÇALHO -->
+      <div style="text-align: center; margin-bottom: 28px;">
+        <h1 style="color: #0f766e; font-size: 28px; margin: 0; font-weight: 600; letter-spacing: -0.5px;">IZAQUE</h1>
+        <p style="color: #78716c; font-size: 13px; margin-top: 4px; font-style: italic;">Espaço de Clareza, Acolhimento & Reconstrução de Vida</p>
+      </div>
+
+      <!-- CARD PRINCIPAL -->
+      <div style="background-color: #ffffff; padding: 36px 32px; border-radius: 22px; border: 1px solid #f5f5f4; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+        <div style="color: #334155; font-size: 15px;">
+          ${personalizedContent}
+        </div>
+
+        <!-- BOTÃO DE AÇÃO -->
+        <div style="text-align: center; margin: 36px 0 20px 0;">
+          <a href="${appUrl}" style="background-color: #0f766e; color: #ffffff; text-decoration: none; padding: 15px 36px; border-radius: 16px; font-weight: 600; font-size: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(15, 118, 110, 0.28); letter-spacing: 0.2px;">
+            ${callToActionText}
+          </a>
+        </div>
+
+        <!-- ASSINATURA OBRIGATÓRIA DA EQUIPE LYNX EMS -->
+        <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
+          <p style="margin: 0; font-size: 14px; font-weight: 600; color: #0f766e;">Com respeito, admiração e carinho pela sua caminhada,</p>
+          <p style="margin: 4px 0 0 0; font-size: 15px; font-weight: 700; color: #0f172a;">Equipe Lynx EMS</p>
+          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Tecnologia com Alma & Mentoria IZAQUE</p>
+          <p style="margin: 6px 0 0 0; font-size: 12px;">
+            <a href="mailto:suporte@lynxems.com.br" style="color: #0f766e; text-decoration: none; font-weight: 500;">suporte@lynxems.com.br</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- RODAPÉ -->
+      <div style="text-align: center; margin-top: 24px; font-size: 11px; color: #a8a29e;">
+        Você está recebendo este comunicado porque faz parte do refúgio <strong>IZAQUE</strong>.<br>
+        © ${new Date().getFullYear()} Lynx EMS. Todos os direitos reservados.
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Dispara o e-mail em massa para os usuários do app
+ */
+export async function sendBroadcastEmail({
+  subject,
+  htmlContent,
+  callToActionText = 'Visitar Meu Refúgio Agora',
+  targetAudience = 'all',
+  testEmail = null,
+}) {
+  const transporter = getEmailTransporter();
+  const fromAddress = `"Equipe Lynx EMS - IZAQUE" <${process.env.SMTP_USER || 'suporte@lynxems.com.br'}>`;
+  const appUrl = (process.env.APP_URL || 'https://izaque.lynxems.com.br').replace(/\/$/, '');
+
+  // 1. Modo de Teste
+  if (targetAudience === 'test') {
+    const recipient = testEmail || process.env.SMTP_USER || 'suporte@lynxems.com.br';
+    const finalHtml = renderBroadcastEmailHtml({
+      contentHtml: htmlContent,
+      userName: 'Administrador',
+      appUrl,
+      callToActionText,
+    });
+
+    const info = await transporter.sendMail({
+      from: fromAddress,
+      to: recipient,
+      subject: `[TESTE] ${subject}`,
+      html: finalHtml,
+    });
+
+    return {
+      success: true,
+      mode: 'test',
+      totalTarget: 1,
+      totalSent: 1,
+      totalFailed: 0,
+      recipients: [recipient],
+      messageId: info.messageId,
+    };
+  }
+
+  // 2. Busca os usuários alvo no Supabase
+  let query = supabaseAdmin
+    .from('izaque_profiles')
+    .select('id, email, full_name, plan_id, is_active')
+    .not('email', 'is', null)
+    .neq('is_active', false);
+
+  if (targetAudience === 'subscribers') {
+    query = query.not('plan_id', 'is', null).neq('plan_id', 'free');
+  } else if (targetAudience === 'free') {
+    query = query.or('plan_id.is.null,plan_id.eq.free');
+  }
+
+  const { data: users, error: userErr } = await query;
+  if (userErr) throw userErr;
+
+  const validUsers = (users || []).filter(u => u.email && u.email.includes('@'));
+  if (validUsers.length === 0) {
+    return {
+      success: true,
+      mode: 'broadcast',
+      totalTarget: 0,
+      totalSent: 0,
+      totalFailed: 0,
+      recipients: [],
+    };
+  }
+
+  let totalSent = 0;
+  let totalFailed = 0;
+  const failedList = [];
+
+  for (const user of validUsers) {
+    try {
+      const finalHtml = renderBroadcastEmailHtml({
+        contentHtml: htmlContent,
+        userName: user.full_name || '',
+        appUrl,
+        callToActionText,
+      });
+
+      await transporter.sendMail({
+        from: fromAddress,
+        to: user.email,
+        subject,
+        html: finalHtml,
+      });
+
+      totalSent++;
+      console.log(`✉️ [Broadcast Sent] ${totalSent}/${validUsers.length} para ${user.email}`);
+
+      // Pausa de 120ms para respeitar taxas de envio do SMTP da Hostinger
+      await new Promise(r => setTimeout(r, 120));
+    } catch (err) {
+      totalFailed++;
+      console.warn(`⚠️ [Broadcast Error] Falha ao enviar para ${user.email}:`, err.message);
+      failedList.push({ email: user.email, error: err.message });
+    }
+  }
+
+  return {
+    success: true,
+    mode: 'broadcast',
+    totalTarget: validUsers.length,
+    totalSent,
+    totalFailed,
+    failedList,
+  };
 }
 

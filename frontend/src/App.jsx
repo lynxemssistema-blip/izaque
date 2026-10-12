@@ -10,9 +10,9 @@ import UserProfileModal from './components/UserProfileModal';
 import MobileBottomNav from './components/MobileBottomNav';
 import UserSettingsModal from './components/UserSettingsModal';
 import ResetPasswordModal from './components/ResetPasswordModal';
-import SubscriptionModal from './components/SubscriptionModal';
 import SubscriberFeedbackModal from './components/SubscriberFeedbackModal';
 import { AlertTriangle, LifeBuoy } from 'lucide-react';
+import { applyAppTheme, getCurrentTheme } from './services/themeService';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -21,8 +21,6 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [resetTokenHash, setResetTokenHash] = useState('');
-  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
-  const [selectedInitialPlan, setSelectedInitialPlan] = useState('pro_monthly');
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -68,6 +66,10 @@ export default function App() {
           if (p.voice_rate !== undefined) localStorage.setItem('izaque_voice_rate', p.voice_rate.toString());
           if (p.voice_pitch !== undefined) localStorage.setItem('izaque_voice_pitch', p.voice_pitch.toString());
           if (p.voice_uri) localStorage.setItem('izaque_voice_uri', p.voice_uri);
+          if (p.app_theme) {
+            localStorage.setItem('izaque_app_theme', p.app_theme);
+            applyAppTheme(p.app_theme);
+          }
           if (p.prefer_browser !== undefined) {
             localStorage.setItem('izaque_voice_prefer_browser', p.prefer_browser ? 'true' : 'false');
           }
@@ -95,6 +97,13 @@ export default function App() {
   }, [activeTab]);
 
   useEffect(() => {
+    // Inicializa tema visual individual do usuário
+    applyAppTheme(getCurrentTheme());
+    const handleThemeChange = (e) => {
+      if (e.detail) applyAppTheme(e.detail);
+    };
+    window.addEventListener('app-theme-changed', handleThemeChange);
+
     // Detecta se a URL contém instrução de recuperação de senha
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search);
@@ -150,7 +159,10 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('app-theme-changed', handleThemeChange);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -250,15 +262,6 @@ export default function App() {
           onLogout={handleLogout}
           onOpenOnboarding={() => setShowOnboarding(true)}
           onOpenProfile={() => setIsProfileOpen(true)}
-          onOpenSubscription={(planId) => {
-            if (typeof planId === 'string') setSelectedInitialPlan(planId);
-            else setSelectedInitialPlan('pro_monthly');
-            if (!user) {
-              setIsAuthOpen(true);
-            } else {
-              setIsSubscriptionOpen(true);
-            }
-          }}
           onOpenFeedback={() => setIsFeedbackOpen(true)}
         />
       </div>
@@ -269,14 +272,6 @@ export default function App() {
           <LandingPage
             onStartChat={handleStartChat}
             user={user}
-            onOpenSubscription={(planId) => {
-              setSelectedInitialPlan(planId || 'pro_monthly');
-              if (!user) {
-                setIsAuthOpen(true);
-              } else {
-                setIsSubscriptionOpen(true);
-              }
-            }}
           />
         )}
 
@@ -399,17 +394,6 @@ export default function App() {
         profile={profile}
       />
 
-      {/* MODAL DE PLANOS & ASSINATURAS PIX */}
-      <SubscriptionModal
-        isOpen={isSubscriptionOpen}
-        onClose={() => setIsSubscriptionOpen(false)}
-        user={user}
-        profile={profile}
-        initialPlanId={selectedInitialPlan}
-        onPlanUpdated={() => {
-          if (user) loadUserProfile(user);
-        }}
-      />
 
       {/* MODAL DE SUPORTE, SUGESTÕES E RECLAMAÇÕES LYNX */}
       <SubscriberFeedbackModal

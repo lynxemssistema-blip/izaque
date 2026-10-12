@@ -12,7 +12,15 @@
     <title>Mentoria IZAQUE — Clareza, Escuta & Transformação</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('izaque_app_theme') || 'emerald';
+          document.documentElement.classList.add('theme-' + t);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-sanctuary-cream text-sanctuary-ink antialiased selection:bg-sanctuary-sageLight selection:text-sanctuary-sageDeep transition-colors duration-300">
     <div id="root"></div>
