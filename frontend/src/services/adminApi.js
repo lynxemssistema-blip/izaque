@@ -820,3 +820,309 @@ export async function uploadBroadcastAudio(audioBlobOrFile) {
   }
 }
 
+/**
+ * ============================================================================
+ * GESTÃO E CRONOGRAMA DO PROJETO IZAQUE (MEMBROS, MARCOS, TAREFAS E COBRANÇAS)
+ * ============================================================================
+ */
+
+export async function fetchProjectMembers() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/members`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data } = await supabase
+    .from('izaque_project_members')
+    .select('*')
+    .order('name', { ascending: true });
+  return data || [];
+}
+
+export async function createProjectMember(member) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(member),
+    });
+    if (res.ok) return await res.json();
+    const err = await res.json().catch(() => ({}));
+    if (err.error) throw new Error(err.error);
+  } catch (e) {
+    if (e.message && !e.message.includes('fetch')) throw e;
+  }
+
+  const { data, error } = await supabase
+    .from('izaque_project_members')
+    .insert([member])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProjectMember(id, member) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/members/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(member),
+    });
+    if (res.ok) return await res.json();
+    const err = await res.json().catch(() => ({}));
+    if (err.error) throw new Error(err.error);
+  } catch (e) {
+    if (e.message && !e.message.includes('fetch')) throw e;
+  }
+
+  const { data, error } = await supabase
+    .from('izaque_project_members')
+    .update({ ...member, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProjectMember(id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/members/${id}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) return await res.json();
+  } catch {}
+
+  const { error } = await supabase
+    .from('izaque_project_members')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  return { success: true };
+}
+
+export async function fetchProjectMilestones() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/milestones`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data } = await supabase
+    .from('izaque_project_milestones')
+    .select('*')
+    .order('order_index', { ascending: true })
+    .order('created_at', { ascending: true });
+  return data || [];
+}
+
+export async function createProjectMilestone(milestone) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/milestones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(milestone),
+    });
+    if (res.ok) return await res.json();
+    const err = await res.json().catch(() => ({}));
+    if (err.error) throw new Error(err.error);
+  } catch (e) {
+    if (e.message && !e.message.includes('fetch')) throw e;
+  }
+
+  const { data, error } = await supabase
+    .from('izaque_project_milestones')
+    .insert([milestone])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProjectMilestone(id, milestone) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/milestones/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(milestone),
+    });
+    if (res.ok) return await res.json();
+    const err = await res.json().catch(() => ({}));
+    if (err.error) throw new Error(err.error);
+  } catch (e) {
+    if (e.message && !e.message.includes('fetch')) throw e;
+  }
+
+  const { data, error } = await supabase
+    .from('izaque_project_milestones')
+    .update({ ...milestone, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProjectMilestone(id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/milestones/${id}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) return await res.json();
+  } catch {}
+
+  const { error } = await supabase
+    .from('izaque_project_milestones')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  return { success: true };
+}
+
+export async function fetchProjectTasks(filters = {}) {
+  try {
+    const params = new URLSearchParams();
+    if (filters.milestone_id) params.append('milestone_id', filters.milestone_id);
+    if (filters.status) params.append('status', filters.status);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/tasks${qs}`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  let query = supabase
+    .from('izaque_project_tasks')
+    .select(`
+      *,
+      milestone:izaque_project_milestones(id, title, color, status),
+      member:izaque_project_members(id, name, email, role_title)
+    `)
+    .order('due_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false });
+
+  if (filters.milestone_id) query = query.eq('milestone_id', filters.milestone_id);
+  if (filters.status) query = query.eq('status', filters.status);
+
+  const { data } = await query;
+  return data || [];
+}
+
+export async function createProjectTask(task) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(task),
+    });
+    if (res.ok) return await res.json();
+    const err = await res.json().catch(() => ({}));
+    if (err.error) throw new Error(err.error);
+  } catch (e) {
+    if (e.message && !e.message.includes('fetch')) throw e;
+  }
+
+  const { data, error } = await supabase
+    .from('izaque_project_tasks')
+    .insert([task])
+    .select(`
+      *,
+      milestone:izaque_project_milestones(id, title, color, status),
+      member:izaque_project_members(id, name, email, role_title)
+    `)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProjectTask(id, task) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/tasks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(task),
+    });
+    if (res.ok) return await res.json();
+    const err = await res.json().catch(() => ({}));
+    if (err.error) throw new Error(err.error);
+  } catch (e) {
+    if (e.message && !e.message.includes('fetch')) throw e;
+  }
+
+  const { data, error } = await supabase
+    .from('izaque_project_tasks')
+    .update({ ...task, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select(`
+      *,
+      milestone:izaque_project_milestones(id, title, color, status),
+      member:izaque_project_members(id, name, email, role_title)
+    `)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProjectTask(id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/tasks/${id}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) return await res.json();
+  } catch {}
+
+  const { error } = await supabase
+    .from('izaque_project_tasks')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  return { success: true };
+}
+
+export async function triggerTaskReminder(taskId) {
+  const res = await fetch(`${BACKEND_URL}/api/admin/project/tasks/${taskId}/notify`, {
+    method: 'POST',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Falha ao disparar lembrete.');
+  return data;
+}
+
+export async function runAutomatedRemindersCheck() {
+  const res = await fetch(`${BACKEND_URL}/api/admin/project/check-reminders`, {
+    method: 'POST',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Falha na checagem automática.');
+  return data;
+}
+
+export async function fetchProjectNotificationsLog() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/project/notifications-log`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data } = await supabase
+    .from('izaque_project_notifications_log')
+    .select(`
+      *,
+      task:izaque_project_tasks(id, title),
+      member:izaque_project_members(id, name, role_title)
+    `)
+    .order('sent_at', { ascending: false })
+    .limit(50);
+  return data || [];
+}
+

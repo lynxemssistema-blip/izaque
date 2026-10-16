@@ -5,6 +5,8 @@ import {
   generateBroadcastEmailDraft,
   sendBroadcastEmail,
   renderBroadcastEmailHtml,
+  sendTaskReminderEmail,
+  sendTaskCompletedEmail,
 } from '../services/emailService.js';
 
 /**
@@ -1284,6 +1286,653 @@ export async function markAllNotificationsAsRead(req, res) {
   } catch (error) {
     console.error('❌ Erro ao marcar todas notificações como lidas:', error);
     res.status(500).json({ error: 'Erro ao atualizar notificações.' });
+  }
+}
+
+/**
+ * ============================================================================
+ * GESTÃO E CRONOGRAMA DO PROJETO IZAQUE (MEMBROS, MARCOS, TAREFAS E COBRANÇAS)
+ * ============================================================================
+ */
+
+/**
+ * 43. Listar membros da equipe de execução do projeto
+ * GET /api/admin/project/members
+ */
+export async function getProjectMembers(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_project_members')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao buscar membros do projeto:', error);
+    res.status(500).json({ error: 'Erro ao listar membros do projeto: ' + error.message });
+  }
+}
+
+/**
+ * 44. Criar membro da equipe do projeto
+ * POST /api/admin/project/members
+ */
+export async function createProjectMember(req, res) {
+  try {
+    const { name, email, role_title, phone, is_active } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'O nome do membro é obrigatório.' });
+    }
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'Informe um e-mail válido para notificações.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_project_members')
+      .insert({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role_title: role_title ? role_title.trim() : 'Responsável Técnico',
+        phone: phone ? phone.trim() : null,
+        is_active: is_active !== undefined ? Boolean(is_active) : true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao cadastrar membro do projeto:', error);
+    res.status(500).json({ error: 'Erro ao cadastrar membro: ' + error.message });
+  }
+}
+
+/**
+ * 45. Atualizar membro da equipe do projeto
+ * PUT /api/admin/project/members/:id
+ */
+export async function updateProjectMember(req, res) {
+  try {
+    const { id } = req.params;
+    const { name, email, role_title, phone, is_active } = req.body;
+
+    const updateData = { updated_at: new Date().toISOString() };
+    if (name !== undefined) updateData.name = name.trim();
+    if (email !== undefined) updateData.email = email.trim().toLowerCase();
+    if (role_title !== undefined) updateData.role_title = role_title.trim();
+    if (phone !== undefined) updateData.phone = phone ? phone.trim() : null;
+    if (is_active !== undefined) updateData.is_active = Boolean(is_active);
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_project_members')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar membro do projeto:', error);
+    res.status(500).json({ error: 'Erro ao atualizar membro: ' + error.message });
+  }
+}
+
+/**
+ * 46. Excluir membro da equipe do projeto
+ * DELETE /api/admin/project/members/:id
+ */
+export async function deleteProjectMember(req, res) {
+  try {
+    const { id } = req.params;
+    const { error } = await supabaseAdmin
+      .from('izaque_project_members')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.status(200).json({ success: true, message: 'Membro removido com sucesso.' });
+  } catch (error) {
+    console.error('❌ Erro ao remover membro do projeto:', error);
+    res.status(500).json({ error: 'Erro ao remover membro: ' + error.message });
+  }
+}
+
+/**
+ * 47. Listar etapas / marcos (Milestones) do projeto
+ * GET /api/admin/project/milestones
+ */
+export async function getProjectMilestones(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_project_milestones')
+      .select('*')
+      .order('order_index', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar etapas do projeto:', error);
+    res.status(500).json({ error: 'Erro ao listar etapas: ' + error.message });
+  }
+}
+
+/**
+ * 48. Criar etapa / marco
+ * POST /api/admin/project/milestones
+ */
+export async function createProjectMilestone(req, res) {
+  try {
+    const { title, description, status, start_date, target_date, order_index, color } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'O título da etapa é obrigatório.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_project_milestones')
+      .insert({
+        title: title.trim(),
+        description: description ? description.trim() : '',
+        status: status || 'in_progress',
+        start_date: start_date || null,
+        target_date: target_date || null,
+        order_index: Number(order_index) || 0,
+        color: color || '#0f766e',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao criar etapa do projeto:', error);
+    res.status(500).json({ error: 'Erro ao criar etapa: ' + error.message });
+  }
+}
+
+/**
+ * 49. Atualizar etapa / marco
+ * PUT /api/admin/project/milestones/:id
+ */
+export async function updateProjectMilestone(req, res) {
+  try {
+    const { id } = req.params;
+    const { title, description, status, start_date, target_date, completed_date, order_index, color } = req.body;
+
+    const updateData = { updated_at: new Date().toISOString() };
+    if (title !== undefined) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description ? description.trim() : '';
+    if (status !== undefined) updateData.status = status;
+    if (start_date !== undefined) updateData.start_date = start_date || null;
+    if (target_date !== undefined) updateData.target_date = target_date || null;
+    if (completed_date !== undefined) updateData.completed_date = completed_date || null;
+    if (order_index !== undefined) updateData.order_index = Number(order_index) || 0;
+    if (color !== undefined) updateData.color = color;
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_project_milestones')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar etapa do projeto:', error);
+    res.status(500).json({ error: 'Erro ao atualizar etapa: ' + error.message });
+  }
+}
+
+/**
+ * 50. Excluir etapa / marco
+ * DELETE /api/admin/project/milestones/:id
+ */
+export async function deleteProjectMilestone(req, res) {
+  try {
+    const { id } = req.params;
+    const { error } = await supabaseAdmin
+      .from('izaque_project_milestones')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.status(200).json({ success: true, message: 'Etapa removida com sucesso.' });
+  } catch (error) {
+    console.error('❌ Erro ao excluir etapa do projeto:', error);
+    res.status(500).json({ error: 'Erro ao excluir etapa: ' + error.message });
+  }
+}
+
+/**
+ * 51. Listar tarefas / atividades do projeto com joins
+ * GET /api/admin/project/tasks
+ */
+export async function getProjectTasks(req, res) {
+  try {
+    const { milestone_id, status } = req.query;
+
+    let query = supabaseAdmin
+      .from('izaque_project_tasks')
+      .select(`
+        *,
+        milestone:izaque_project_milestones(id, title, color, status),
+        member:izaque_project_members(id, name, email, role_title)
+      `)
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false });
+
+    if (milestone_id) {
+      query = query.eq('milestone_id', milestone_id);
+    }
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar atividades do projeto:', error);
+    res.status(500).json({ error: 'Erro ao listar atividades: ' + error.message });
+  }
+}
+
+/**
+ * 52. Criar tarefa / atividade
+ * POST /api/admin/project/tasks
+ */
+export async function createProjectTask(req, res) {
+  try {
+    const {
+      milestone_id,
+      assigned_member_id,
+      title,
+      description,
+      status = 'pending',
+      priority = 'medium',
+      start_date,
+      due_date,
+      checklist = [],
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'O título da atividade é obrigatório.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_project_tasks')
+      .insert({
+        milestone_id: milestone_id || null,
+        assigned_member_id: assigned_member_id || null,
+        title: title.trim(),
+        description: description ? description.trim() : '',
+        status,
+        priority,
+        start_date: start_date || null,
+        due_date: due_date || null,
+        checklist: Array.isArray(checklist) ? checklist : [],
+      })
+      .select(`
+        *,
+        milestone:izaque_project_milestones(id, title, color, status),
+        member:izaque_project_members(id, name, email, role_title)
+      `)
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao criar atividade do projeto:', error);
+    res.status(500).json({ error: 'Erro ao criar atividade: ' + error.message });
+  }
+}
+
+/**
+ * 53. Atualizar tarefa / atividade (e notificar conclusão se solicitado)
+ * PUT /api/admin/project/tasks/:id
+ */
+export async function updateProjectTask(req, res) {
+  try {
+    const { id } = req.params;
+    const {
+      milestone_id,
+      assigned_member_id,
+      title,
+      description,
+      status,
+      priority,
+      start_date,
+      due_date,
+      checklist,
+      notify_completion,
+    } = req.body;
+
+    // Buscar estado atual da tarefa
+    const { data: currentTask } = await supabaseAdmin
+      .from('izaque_project_tasks')
+      .select(`
+        *,
+        milestone:izaque_project_milestones(id, title),
+        member:izaque_project_members(id, name, email)
+      `)
+      .eq('id', id)
+      .single();
+
+    const updateData = { updated_at: new Date().toISOString() };
+    if (milestone_id !== undefined) updateData.milestone_id = milestone_id || null;
+    if (assigned_member_id !== undefined) updateData.assigned_member_id = assigned_member_id || null;
+    if (title !== undefined) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description ? description.trim() : '';
+    if (priority !== undefined) updateData.priority = priority;
+    if (start_date !== undefined) updateData.start_date = start_date || null;
+    if (due_date !== undefined) updateData.due_date = due_date || null;
+    if (checklist !== undefined && Array.isArray(checklist)) updateData.checklist = checklist;
+
+    let isNewlyCompleted = false;
+    if (status !== undefined) {
+      updateData.status = status;
+      if (status === 'completed' && currentTask?.status !== 'completed') {
+        updateData.completed_at = new Date().toISOString();
+        isNewlyCompleted = true;
+      } else if (status !== 'completed') {
+        updateData.completed_at = null;
+      }
+    }
+
+    const { data: updatedTask, error } = await supabaseAdmin
+      .from('izaque_project_tasks')
+      .update(updateData)
+      .eq('id', id)
+      .select(`
+        *,
+        milestone:izaque_project_milestones(id, title, color, status),
+        member:izaque_project_members(id, name, email, role_title)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    // Se acabou de ser concluída e foi pedido para notificar (ou automático)
+    if (isNewlyCompleted && (notify_completion || currentTask?.member?.email)) {
+      try {
+        const supportEmail = process.env.SMTP_USER || 'suporte@lynxems.com.br';
+        const recipient = currentTask?.member?.email || supportEmail;
+
+        await sendTaskCompletedEmail({
+          recipientEmail: recipient,
+          taskTitle: updatedTask.title,
+          taskDescription: updatedTask.description,
+          memberName: updatedTask.member?.name || 'Equipe IZAQUE',
+          completedDate: updatedTask.completed_at,
+          milestoneTitle: updatedTask.milestone?.title || 'Fase Geral',
+        });
+
+        // Log da notificação
+        await supabaseAdmin.from('izaque_project_notifications_log').insert({
+          task_id: updatedTask.id,
+          member_id: updatedTask.assigned_member_id,
+          type: 'task_completed',
+          recipient_email: recipient,
+          subject: `✅ [ENTREGA CONCLUÍDA] Atividade Finalizada: ${updatedTask.title}`,
+          status: 'sent',
+        });
+      } catch (emailErr) {
+        console.warn('⚠️ Falha ao enviar e-mail de conclusão de tarefa:', emailErr.message);
+      }
+    }
+
+    res.status(200).json(updatedTask);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar atividade do projeto:', error);
+    res.status(500).json({ error: 'Erro ao atualizar atividade: ' + error.message });
+  }
+}
+
+/**
+ * 54. Excluir tarefa / atividade
+ * DELETE /api/admin/project/tasks/:id
+ */
+export async function deleteProjectTask(req, res) {
+  try {
+    const { id } = req.params;
+    const { error } = await supabaseAdmin
+      .from('izaque_project_tasks')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.status(200).json({ success: true, message: 'Atividade removida com sucesso.' });
+  } catch (error) {
+    console.error('❌ Erro ao excluir atividade:', error);
+    res.status(500).json({ error: 'Erro ao excluir atividade: ' + error.message });
+  }
+}
+
+/**
+ * 55. Envio manual de cobrança / lembrete de tarefa para o responsável
+ * POST /api/admin/project/tasks/:id/notify
+ */
+export async function notifyTaskReminder(req, res) {
+  try {
+    const { id } = req.params;
+
+    const { data: task, error: fetchErr } = await supabaseAdmin
+      .from('izaque_project_tasks')
+      .select(`
+        *,
+        milestone:izaque_project_milestones(id, title),
+        member:izaque_project_members(id, name, email)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !task) {
+      return res.status(404).json({ error: 'Atividade não encontrada.' });
+    }
+
+    if (!task.member || !task.member.email) {
+      return res.status(400).json({ error: 'Esta atividade não possui um responsável com e-mail cadastrado.' });
+    }
+
+    // Calcular dias restantes
+    let daysRemaining = 0;
+    let isDueToday = false;
+    if (task.due_date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(task.due_date + 'T00:00:00');
+      const diffMs = due - today;
+      daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      isDueToday = daysRemaining === 0;
+    }
+
+    await sendTaskReminderEmail({
+      recipientEmail: task.member.email,
+      recipientName: task.member.name,
+      taskTitle: task.title,
+      taskDescription: task.description,
+      dueDate: task.due_date,
+      daysRemaining: Math.max(0, daysRemaining),
+      milestoneTitle: task.milestone?.title || 'Fase Geral',
+      priority: task.priority,
+      isDueToday,
+    });
+
+    // Registrar no log
+    await supabaseAdmin.from('izaque_project_notifications_log').insert({
+      task_id: task.id,
+      member_id: task.assigned_member_id,
+      type: isDueToday ? 'reminder_due' : 'manual_notice',
+      recipient_email: task.member.email,
+      subject: isDueToday
+        ? `🚨 [PRAZO HOJE] Entrega da Atividade: ${task.title}`
+        : `⏰ [LEMBRETE] ${daysRemaining} dia(s) para o prazo: ${task.title}`,
+      status: 'sent',
+    });
+
+    // Atualizar registro da tarefa
+    await supabaseAdmin
+      .from('izaque_project_tasks')
+      .update({
+        notified_due_at: isDueToday ? new Date().toISOString() : task.notified_due_at,
+        notified_pre_at: !isDueToday ? new Date().toISOString() : task.notified_pre_at,
+      })
+      .eq('id', task.id);
+
+    res.status(200).json({
+      success: true,
+      message: `E-mail de cobrança enviado com sucesso para ${task.member.name} (${task.member.email}).`,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao enviar lembrete manual de tarefa:', error);
+    res.status(500).json({ error: 'Falha ao enviar e-mail: ' + error.message });
+  }
+}
+
+/**
+ * 56. Rotina de checagem e disparo automático de cobranças de prazos
+ * POST /api/admin/project/check-reminders
+ */
+export async function runProjectRemindersCheck(req, res) {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Buscar tarefas ativas com data de vencimento e membro responsável
+    const { data: tasks, error } = await supabaseAdmin
+      .from('izaque_project_tasks')
+      .select(`
+        *,
+        milestone:izaque_project_milestones(id, title),
+        member:izaque_project_members(id, name, email, is_active)
+      `)
+      .not('due_date', 'is', null)
+      .not('assigned_member_id', 'is', null)
+      .not('status', 'in', '("completed","blocked")');
+
+    if (error) throw error;
+
+    const dispatched = [];
+    const skipped = [];
+
+    for (const task of tasks || []) {
+      if (!task.member || !task.member.email || task.member.is_active === false) {
+        skipped.push({ taskId: task.id, reason: 'Sem membro ou membro inativo' });
+        continue;
+      }
+
+      const due = new Date(task.due_date + 'T00:00:00');
+      const diffMs = due - today;
+      const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      // Caso 1: Vencimento HOJE (D-0) e ainda não notificado hoje
+      if (daysRemaining === 0) {
+        const alreadyNotifiedToday = task.notified_due_at &&
+          new Date(task.notified_due_at).toISOString().split('T')[0] === today.toISOString().split('T')[0];
+
+        if (!alreadyNotifiedToday) {
+          await sendTaskReminderEmail({
+            recipientEmail: task.member.email,
+            recipientName: task.member.name,
+            taskTitle: task.title,
+            taskDescription: task.description,
+            dueDate: task.due_date,
+            daysRemaining: 0,
+            milestoneTitle: task.milestone?.title || 'Fase Geral',
+            priority: task.priority,
+            isDueToday: true,
+          });
+
+          await supabaseAdmin.from('izaque_project_notifications_log').insert({
+            task_id: task.id,
+            member_id: task.assigned_member_id,
+            type: 'reminder_due',
+            recipient_email: task.member.email,
+            subject: `🚨 [PRAZO HOJE] Entrega da Atividade: ${task.title}`,
+            status: 'sent',
+          });
+
+          await supabaseAdmin
+            .from('izaque_project_tasks')
+            .update({ notified_due_at: new Date().toISOString() })
+            .eq('id', task.id);
+
+          dispatched.push({ taskId: task.id, taskTitle: task.title, type: 'D-0 (Hoje)', to: task.member.email });
+        }
+      }
+      // Caso 2: Aviso Prévio (Faltam 1 ou 2 dias) e ainda não enviado
+      else if (daysRemaining > 0 && daysRemaining <= 2) {
+        if (!task.notified_pre_at) {
+          await sendTaskReminderEmail({
+            recipientEmail: task.member.email,
+            recipientName: task.member.name,
+            taskTitle: task.title,
+            taskDescription: task.description,
+            dueDate: task.due_date,
+            daysRemaining,
+            milestoneTitle: task.milestone?.title || 'Fase Geral',
+            priority: task.priority,
+            isDueToday: false,
+          });
+
+          await supabaseAdmin.from('izaque_project_notifications_log').insert({
+            task_id: task.id,
+            member_id: task.assigned_member_id,
+            type: 'reminder_pre',
+            recipient_email: task.member.email,
+            subject: `⏰ [LEMBRETE] ${daysRemaining} dia(s) para o prazo: ${task.title}`,
+            status: 'sent',
+          });
+
+          await supabaseAdmin
+            .from('izaque_project_tasks')
+            .update({ notified_pre_at: new Date().toISOString() })
+            .eq('id', task.id);
+
+          dispatched.push({ taskId: task.id, taskTitle: task.title, type: `D-${daysRemaining} (Prévia)`, to: task.member.email });
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      scanned: (tasks || []).length,
+      dispatchedCount: dispatched.length,
+      dispatched,
+      skippedCount: skipped.length,
+    });
+  } catch (error) {
+    console.error('❌ Erro na checagem de cobranças automáticas:', error);
+    res.status(500).json({ error: 'Erro ao verificar cobranças: ' + error.message });
+  }
+}
+
+/**
+ * 57. Obter log de notificações e cobranças enviadas
+ * GET /api/admin/project/notifications-log
+ */
+export async function getProjectNotificationsLog(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_project_notifications_log')
+      .select(`
+        *,
+        task:izaque_project_tasks(id, title),
+        member:izaque_project_members(id, name, role_title)
+      `)
+      .order('sent_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar logs de notificações:', error);
+    res.status(500).json({ error: 'Erro ao listar histórico de avisos: ' + error.message });
   }
 }
 

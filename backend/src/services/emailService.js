@@ -574,3 +574,181 @@ export async function sendBroadcastEmail({
   };
 }
 
+/**
+ * Envia e-mail de cobrança / lembrete de atividade do Projeto IZAQUE
+ */
+export async function sendTaskReminderEmail({
+  recipientEmail,
+  recipientName,
+  taskTitle,
+  taskDescription = '',
+  dueDate,
+  daysRemaining,
+  milestoneTitle = 'Fase Geral',
+  priority = 'medium',
+  isDueToday = false,
+}) {
+  const transporter = getEmailTransporter();
+  const fromAddress = `"Gestão de Projetos IZAQUE" <${process.env.SMTP_USER || 'suporte@lynxems.com.br'}>`;
+
+  const priorityLabels = {
+    critical: '🔴 Crítica',
+    high: '🟠 Alta',
+    medium: '🟡 Média',
+    low: '🟢 Baixa',
+  };
+
+  const subject = isDueToday
+    ? `🚨 [PRAZO HOJE] Entrega da Atividade: ${taskTitle}`
+    : `⏰ [LEMBRETE] ${daysRemaining} dia(s) para o prazo: ${taskTitle}`;
+
+  const bannerColor = isDueToday ? '#ef4444' : '#f59e0b';
+  const bannerText = isDueToday
+    ? 'Atenção: A data limite de entrega desta atividade é HOJE!'
+    : `Atenção: Faltam apenas ${daysRemaining} dia(s) para a entrega desta atividade.`;
+
+  const formattedDate = dueDate
+    ? new Date(dueDate + 'T12:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    : 'Não definida';
+
+  const mailOptions = {
+    from: fromAddress,
+    to: recipientEmail,
+    subject,
+    html: `
+      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #faf9f6; padding: 32px 20px; border-radius: 24px; border: 1px solid #e7e5e4; color: #292524;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h1 style="color: #0f766e; font-size: 26px; margin: 0; font-weight: 700; letter-spacing: -0.5px;">IZAQUE</h1>
+          <p style="color: #78716c; font-size: 13px; margin-top: 4px; font-weight: 500;">Governança & Cronograma de Entregas</p>
+        </div>
+
+        <div style="background-color: #ffffff; padding: 28px; border-radius: 20px; border: 1px solid #f0eeeb; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+          <div style="background-color: ${bannerColor}15; border-left: 4px solid ${bannerColor}; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; font-size: 13px; font-weight: 600; color: ${bannerColor === '#ef4444' ? '#b91c1c' : '#b45309'};">
+              ${bannerText}
+            </p>
+          </div>
+
+          <h2 style="font-size: 18px; color: #1c1917; margin-top: 0; margin-bottom: 8px;">Olá, ${recipientName || 'Colega de Equipe'}!</h2>
+          <p style="font-size: 14px; line-height: 1.6; color: #57534e; margin-bottom: 20px;">
+            Este é um aviso automático do sistema de acompanhamento do Projeto IZAQUE sobre uma atividade sob sua responsabilidade:
+          </p>
+
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; margin-bottom: 20px;">
+            <div style="margin-bottom: 12px;">
+              <span style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.5px;">Atividade</span>
+              <h3 style="margin: 4px 0 0 0; font-size: 16px; color: #0f172a; font-weight: 600;">${taskTitle}</h3>
+            </div>
+
+            ${taskDescription ? `
+            <div style="margin-bottom: 12px;">
+              <span style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.5px;">Detalhes / Escopo</span>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569; line-height: 1.5; white-space: pre-wrap;">${taskDescription}</p>
+            </div>
+            ` : ''}
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px;">
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;"><strong>Etapa / Marco:</strong></td>
+                <td style="padding: 6px 0; color: #0f172a; text-align: right;">${milestoneTitle}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;"><strong>Prazo de Entrega:</strong></td>
+                <td style="padding: 6px 0; color: ${isDueToday ? '#dc2626' : '#0f172a'}; font-weight: 600; text-align: right;">${formattedDate}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;"><strong>Prioridade:</strong></td>
+                <td style="padding: 6px 0; text-align: right;">${priorityLabels[priority] || priority}</td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="font-size: 13px; line-height: 1.5; color: #78716c; margin-bottom: 0;">
+            Por favor, garanta a execução e avise a gestão do projeto assim que a entrega for concluída ou caso haja qualquer impedimento.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 24px; font-size: 11px; color: #a8a29e;">
+          © ${new Date().getFullYear()} Gestão do Projeto IZAQUE. Sistema Automatizado de Cronograma.
+        </div>
+      </div>
+    `,
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  return info;
+}
+
+/**
+ * Envia e-mail notificando a conclusão de uma atividade
+ */
+export async function sendTaskCompletedEmail({
+  recipientEmail,
+  taskTitle,
+  taskDescription = '',
+  memberName,
+  completedDate,
+  milestoneTitle = 'Fase Geral',
+}) {
+  const transporter = getEmailTransporter();
+  const fromAddress = `"Gestão de Projetos IZAQUE" <${process.env.SMTP_USER || 'suporte@lynxems.com.br'}>`;
+
+  const formattedDate = completedDate
+    ? new Date(completedDate).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    : new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+  const mailOptions = {
+    from: fromAddress,
+    to: recipientEmail,
+    subject: `✅ [ENTREGA CONCLUÍDA] Atividade Finalizada: ${taskTitle}`,
+    html: `
+      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #faf9f6; padding: 32px 20px; border-radius: 24px; border: 1px solid #e7e5e4; color: #292524;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h1 style="color: #0f766e; font-size: 26px; margin: 0; font-weight: 700; letter-spacing: -0.5px;">IZAQUE</h1>
+          <p style="color: #78716c; font-size: 13px; margin-top: 4px; font-weight: 500;">Governança & Cronograma de Entregas</p>
+        </div>
+
+        <div style="background-color: #ffffff; padding: 28px; border-radius: 20px; border: 1px solid #f0eeeb; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+          <div style="background-color: #10b98115; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; font-size: 13px; font-weight: 600; color: #047857;">
+              🎉 Mais uma etapa entregue com sucesso no projeto!
+            </p>
+          </div>
+
+          <h2 style="font-size: 18px; color: #1c1917; margin-top: 0; margin-bottom: 12px;">Atividade Finalizada</h2>
+
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; margin-bottom: 20px;">
+            <div style="margin-bottom: 12px;">
+              <span style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.5px;">Atividade</span>
+              <h3 style="margin: 4px 0 0 0; font-size: 16px; color: #0f172a; font-weight: 600;">${taskTitle}</h3>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px;">
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;"><strong>Executado por:</strong></td>
+                <td style="padding: 6px 0; color: #0f172a; font-weight: 600; text-align: right;">${memberName || 'Equipe'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;"><strong>Etapa / Marco:</strong></td>
+                <td style="padding: 6px 0; color: #0f172a; text-align: right;">${milestoneTitle}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b;"><strong>Data de Conclusão:</strong></td>
+                <td style="padding: 6px 0; color: #059669; font-weight: 600; text-align: right;">${formattedDate}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 24px; font-size: 11px; color: #a8a29e;">
+          © ${new Date().getFullYear()} Gestão do Projeto IZAQUE. Sistema Automatizado de Cronograma.
+        </div>
+      </div>
+    `,
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  return info;
+}
+
+

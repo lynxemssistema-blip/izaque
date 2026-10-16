@@ -41,6 +41,21 @@ import {
   getUserNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  getProjectMembers,
+  createProjectMember,
+  updateProjectMember,
+  deleteProjectMember,
+  getProjectMilestones,
+  createProjectMilestone,
+  updateProjectMilestone,
+  deleteProjectMilestone,
+  getProjectTasks,
+  createProjectTask,
+  updateProjectTask,
+  deleteProjectTask,
+  notifyTaskReminder,
+  runProjectRemindersCheck,
+  getProjectNotificationsLog,
 } from '../controllers/adminController.js';
 
 const router = Router();
@@ -104,6 +119,26 @@ router.get('/admin/group-broadcasts', getAdminGroupBroadcasts);
 router.get('/user/notifications/:userId', getUserNotifications);
 router.patch('/user/notifications/:id/read', markNotificationAsRead);
 router.patch('/user/notifications/read-all/:userId', markAllNotificationsAsRead);
+
+// Gestão de Projetos, Membros, Cronograma e Cobranças por E-mail (Superadmin)
+router.get('/admin/project/members', getProjectMembers);
+router.post('/admin/project/members', createProjectMember);
+router.put('/admin/project/members/:id', updateProjectMember);
+router.delete('/admin/project/members/:id', deleteProjectMember);
+
+router.get('/admin/project/milestones', getProjectMilestones);
+router.post('/admin/project/milestones', createProjectMilestone);
+router.put('/admin/project/milestones/:id', updateProjectMilestone);
+router.delete('/admin/project/milestones/:id', deleteProjectMilestone);
+
+router.get('/admin/project/tasks', getProjectTasks);
+router.post('/admin/project/tasks', createProjectTask);
+router.put('/admin/project/tasks/:id', updateProjectTask);
+router.delete('/admin/project/tasks/:id', deleteProjectTask);
+
+router.post('/admin/project/tasks/:id/notify', notifyTaskReminder);
+router.post('/admin/project/check-reminders', runProjectRemindersCheck);
+router.get('/admin/project/notifications-log', getProjectNotificationsLog);
 
 export default router;
 
