@@ -492,10 +492,10 @@ export default function AdminProjectPlanning({ currentUser }) {
         </div>
       </div>
 
-      {/* CARDS EXECUTIVOS & BARRA DE PROGRESSO GLOBAL */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      {/* CARDS EXECUTIVOS & BARRA DE PROGRESSO GLOBAL (Ocultos em dispositivos móveis/celulares) */}
+      <div className="hidden md:grid md:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Progresso Global */}
-        <div className="col-span-2 sm:col-span-1 bg-white dark:bg-slate-800/80 p-5 rounded-3xl border border-stone-200/80 dark:border-slate-700 shadow-sm">
+        <div className="bg-white dark:bg-slate-800/80 p-5 rounded-3xl border border-stone-200/80 dark:border-slate-700 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-serif text-stone-500 dark:text-stone-400">Progresso Geral</span>
             <span className="text-sm font-bold text-teal-700 dark:text-teal-400">

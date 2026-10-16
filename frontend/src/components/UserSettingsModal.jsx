@@ -191,9 +191,22 @@ export default function UserSettingsModal({
     ambientAudio.setVolume(parsed);
   };
 
-  const handleToggleImmersive = (val) => {
+  const handleToggleImmersive = async (val) => {
     setImmersiveVoice(val);
     localStorage.setItem('izaque_immersive_voice', val ? 'true' : 'false');
+    window.dispatchEvent(new CustomEvent('app-immersive-changed', { detail: val }));
+    window.dispatchEvent(new Event('storage'));
+
+    if (user?.id) {
+      try {
+        const currentPrefs = user.preferences || {};
+        await updateUserProfile(user.id, {
+          preferences: { ...currentPrefs, immersive_voice: val },
+        });
+      } catch (err) {
+        console.warn('Aviso ao sincronizar preferência imersiva no Supabase:', err);
+      }
+    }
   };
 
   // Testar demonstração da voz (Gemini ou Navegador)

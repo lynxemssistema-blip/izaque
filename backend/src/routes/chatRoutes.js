@@ -28,7 +28,7 @@ router.put('/profile/:userId', updateProfile);
 // Listar agentes ativos para o seletor do chat
 router.get('/agents', getActiveAgents);
 
-import { handleForgotPassword, handleTestEmail } from '../controllers/authController.js';
+import { handleForgotPassword, handleTestEmail, handleResetPasswordWithToken } from '../controllers/authController.js';
 import {
   getPublicPlans,
   createPixOrder,
@@ -52,6 +52,7 @@ router.post('/voice', handleGenerateVoice);
 
 // Rotas de Autenticação e Suporte Oficial (Hostinger SMTP)
 router.post('/auth/forgot-password', handleForgotPassword);
+router.post('/auth/reset-password', handleResetPasswordWithToken);
 router.post('/auth/test-email', handleTestEmail);
 
 // Rotas de Planos, Checkout PIX e Suporte para Assinantes

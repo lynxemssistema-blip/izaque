@@ -21,20 +21,26 @@ export default function ResetPasswordModal({ isOpen, onClose, tokenHash, onOpenF
           token_hash: tokenHash,
           type: 'recovery',
         })
-        .then(({ data, error }) => {
+        .then(async ({ data, error }) => {
           setVerifying(false);
           if (error) {
-            console.error('Erro ao verificar token_hash:', error);
-            setErrorMsg(
-              'Este link de recuperação expirou ou já foi utilizado. Por favor, solicite um novo link.'
-            );
+            console.warn('Aviso na verificação client-side do token_hash:', error.message);
+            // Mantemos como verificado para permitir que o backend valide via token_hash caso o client perca cookies
+            setTokenVerified(true);
           } else {
+            if (data?.session) {
+              try {
+                await supabase.auth.setSession(data.session);
+              } catch (sessionErr) {
+                console.warn('Aviso ao persistir sessão:', sessionErr);
+              }
+            }
             setTokenVerified(true);
           }
         })
         .catch((err) => {
           setVerifying(false);
-          setErrorMsg('Falha ao validar credencial. Tente solicitar um novo link.');
+          setTokenVerified(true);
         });
     } else if (isOpen && !tokenHash) {
       setTokenVerified(true);
@@ -59,11 +65,44 @@ export default function ResetPasswordModal({ isOpen, onClose, tokenHash, onOpenF
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
+      let resetSuccessful = false;
 
-      if (error) throw error;
+      // 1. Tenta atualizar com a sessão ativa no Supabase Client
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session) {
+          const { error } = await supabase.auth.updateUser({
+            password: newPassword,
+          });
+          if (!error) {
+            resetSuccessful = true;
+          }
+        }
+      } catch (clientErr) {
+        console.warn('Tentando fallback via backend após falha client-side:', clientErr?.message);
+      }
+
+      // 2. Se não tinha sessão (Auth session missing no mobile) ou deu erro, usa o endpoint oficial do backend
+      if (!resetSuccessful) {
+        const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL && import.meta.env.VITE_BACKEND_URL.trim() !== '')
+          ? import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')
+          : '';
+
+        const resp = await fetch(`${BACKEND_URL}/api/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token_hash: tokenHash || null,
+            password: newPassword,
+          }),
+        });
+
+        const respData = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          throw new Error(respData.error || 'Falha ao redefinir senha. Por favor, solicite um novo link.');
+        }
+        resetSuccessful = true;
+      }
 
       setSuccess(true);
       setTimeout(() => {

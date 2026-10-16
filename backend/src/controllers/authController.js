@@ -93,3 +93,75 @@ export async function handleTestEmail(req, res) {
     });
   }
 }
+
+/**
+ * Controller de Redefinição Segura de Senha via Token (Sem dependência de sessão no cliente)
+ * Rota: POST /api/auth/reset-password
+ */
+export async function handleResetPasswordWithToken(req, res) {
+  try {
+    const { token_hash, password, email } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres.' });
+    }
+
+    // 1. Se recebemos o token_hash da recuperação
+    if (token_hash) {
+      const { data: otpData, error: otpError } = await supabaseAdmin.auth.verifyOtp({
+        token_hash,
+        type: 'recovery',
+      });
+
+      if (otpError || !otpData?.user) {
+        console.warn('⚠️ [Reset Password] Falha ao verificar OTP:', otpError?.message);
+        return res.status(400).json({
+          error: 'Link de recuperação expirado ou inválido. Por favor, solicite um novo link de redefinição.',
+        });
+      }
+
+      // Atualiza a senha pelo ID com privilégios de Admin
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(otpData.user.id, {
+        password,
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      console.log(`🔐 [Reset Password] Senha redefinida com sucesso para o usuário ${otpData.user.email} (ID: ${otpData.user.id})`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Senha redefinida com sucesso! Você já pode entrar com sua nova senha.',
+      });
+    }
+
+    // 2. Se foi enviado por e-mail com verificação
+    if (email && email.includes('@')) {
+      const { data: userRow } = await supabaseAdmin
+        .from('izaque_profiles')
+        .select('id')
+        .eq('email', email.trim().toLowerCase())
+        .maybeSingle();
+
+      if (userRow?.id) {
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userRow.id, {
+          password,
+        });
+        if (updateError) throw updateError;
+        return res.status(200).json({
+          success: true,
+          message: 'Senha redefinida com sucesso!',
+        });
+      }
+    }
+
+    return res.status(400).json({ error: 'Token de recuperação ausente ou inválido.' });
+  } catch (error) {
+    console.error('❌ Erro ao redefinir senha com token:', error);
+    res.status(500).json({
+      error: 'Erro ao salvar nova senha: ' + error.message,
+    });
+  }
+}

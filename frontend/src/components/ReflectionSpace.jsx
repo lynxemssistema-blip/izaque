@@ -35,6 +35,7 @@ import {
   Compass,
   ChevronRight,
   HelpCircle,
+  Pin,
 } from 'lucide-react';
 import {
   sendChatMessage,
@@ -185,6 +186,43 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editingTitleText, setEditingTitleText] = useState('');
   const [isCreatingSession, setIsCreatingSession] = useState(false);
+
+  // Fixação (Pin) do Painel Lateral
+  const [isSidebarPinned, setIsSidebarPinned] = useState(() => {
+    return localStorage.getItem('izaque_sidebar_pinned') === 'true';
+  });
+
+  const [isDesktop, setIsDesktop] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Se o usuário deixou fixado anteriormente e está no desktop, abre o painel fixado por padrão
+  useEffect(() => {
+    if (isSidebarPinned && typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setIsSessionsDrawerOpen(true);
+    }
+  }, []);
+
+  const isDocked = Boolean(isSidebarPinned && isDesktop && isSessionsDrawerOpen);
+
+  const handleTogglePin = () => {
+    setIsSidebarPinned((prev) => {
+      const next = !prev;
+      localStorage.setItem('izaque_sidebar_pinned', String(next));
+      if (next) {
+        setIsSessionsDrawerOpen(true);
+      }
+      return next;
+    });
+  };
 
   // Conversas Direcionadas Criadas pelo Superadmin
   const [guidedConversations, setGuidedConversations] = useState([]);
@@ -1049,8 +1087,246 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
     }
   };
 
+  // Renderizador unificado do conteúdo do painel lateral (Suas Conversas & Conversas Direcionadas)
+  const renderSidebarContent = () => (
+    <div className="flex flex-col h-full w-full select-none bg-stone-50 dark:bg-slate-900">
+      {/* Header do Drawer / Painel */}
+      <div className="p-4 sm:p-5 border-b border-stone-200/80 dark:border-slate-800 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-2xl bg-teal-700/10 dark:bg-teal-500/20 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-300 shrink-0">
+            <History className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-base font-serif font-medium leading-tight text-stone-900 dark:text-stone-50 truncate">
+              Suas Conversas
+            </h3>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
+              Organize reflexões por tópico ou momento
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {/* BOTÃO DE FIXAR / DESAFIXAR (PINAR) */}
+          <button
+            type="button"
+            onClick={handleTogglePin}
+            title={
+              isSidebarPinned
+                ? 'Desafixar painel lateral (tornar flutuante)'
+                : 'Fixar painel lateral na página'
+            }
+            className={`p-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 text-xs font-medium ${
+              isSidebarPinned
+                ? 'bg-teal-700/15 text-teal-800 dark:text-teal-300 border border-teal-700/30 dark:border-teal-500/40 shadow-xs'
+                : 'text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Pin className={`w-4 h-4 transition-transform duration-200 ${isSidebarPinned ? 'fill-current rotate-45 text-teal-700 dark:text-teal-400' : ''}`} />
+            <span className="hidden sm:inline text-[11px]">
+              {isSidebarPinned ? 'Fixado' : 'Fixar'}
+            </span>
+          </button>
+
+          {/* BOTÃO DE FECHAR / RECOLHER */}
+          <button
+            type="button"
+            onClick={() => setIsSessionsDrawerOpen(false)}
+            title="Recolher painel"
+            className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Banner de Memória Global dos Mentores */}
+      <div className="mx-4 mt-3 p-3 rounded-2xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/40 flex items-start gap-2.5 text-[11px] text-teal-900 dark:text-teal-200 leading-relaxed shrink-0">
+        <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+        <span>
+          <strong>Memória Contínua Unificada:</strong> Mesmo alternando entre conversas, seus mentores reconhecem toda a sua jornada e histórico sem que você precise se repetir.
+        </span>
+      </div>
+
+      {/* Botão de Criar Nova Sessão */}
+      <div className="p-4 pb-2 shrink-0">
+        <button
+          type="button"
+          onClick={handleCreateNewSession}
+          disabled={isCreatingSession}
+          className="w-full py-2.5 px-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-medium flex items-center justify-center gap-2 shadow-sm transition active:scale-98 cursor-pointer disabled:opacity-50"
+        >
+          {isCreatingSession ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Plus className="w-4 h-4" />
+          )}
+          <span>Iniciar Nova Reflexão</span>
+        </button>
+      </div>
+
+      {/* Lista de Sessões e Conversas Direcionadas */}
+      <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">
+        {/* SEÇÃO: CONVERSAS DIRECIONADAS DO SISTEMA */}
+        {guidedConversations.length > 0 && (
+          <div className="space-y-2">
+            <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
+              <Compass className="w-3.5 h-3.5" />
+              <span>Conversas Direcionadas ({guidedConversations.length})</span>
+            </div>
+
+            <div className="space-y-1.5">
+              {guidedConversations.map((g) => {
+                const isCurrent = sessions.find((s) => s.id === activeSessionId)?.title === g.title;
+                const questionsCount = Array.isArray(g.questions) ? g.questions.length : 0;
+
+                return (
+                  <div
+                    key={g.id}
+                    onClick={() => handleStartGuidedSession(g)}
+                    className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
+                      isCurrent
+                        ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-400 dark:border-teal-700 shadow-xs'
+                        : 'bg-white dark:bg-slate-800/70 border-stone-200/80 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-800 hover:bg-teal-50/40'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[9px] uppercase font-bold text-teal-700 dark:text-teal-400 px-1.5 py-0.2 bg-teal-100/70 dark:bg-teal-900/50 rounded-md">
+                          {g.category || 'Geral'}
+                        </span>
+                        <span className="text-[10px] text-stone-400">
+                          {questionsCount} {questionsCount === 1 ? 'pergunta' : 'perguntas'}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-serif font-medium text-stone-900 dark:text-stone-100 truncate">
+                        {g.title}
+                      </h4>
+                    </div>
+
+                    <ChevronRight className="w-4 h-4 text-stone-400 shrink-0" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* SEÇÃO: HISTÓRICO DE TÓPICOS DO USUÁRIO */}
+        <div className="space-y-2">
+          <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400 flex items-center justify-between">
+            <span>Suas Conversas</span>
+            <span>{sessions.length} {sessions.length === 1 ? 'tópico' : 'tópicos'}</span>
+          </div>
+
+          {sessions.map((sess) => {
+            const isActive = sess.id === activeSessionId;
+            const isEditing = editingSessionId === sess.id;
+            const dateStr = new Date(sess.updated_at || sess.created_at).toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: 'short',
+            });
+
+            return (
+              <div
+                key={sess.id}
+                onClick={() => !isEditing && handleSelectSession(sess.id)}
+                className={`group p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                  isActive
+                    ? 'bg-teal-50 dark:bg-teal-950/50 border-teal-300 dark:border-teal-700/80 shadow-xs'
+                    : 'bg-white dark:bg-slate-800/60 border-stone-200/80 dark:border-slate-800 hover:border-stone-300 dark:hover:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  {isEditing ? (
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={editingTitleText}
+                        onChange={(e) => setEditingTitleText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveRename(sess.id, e);
+                          if (e.key === 'Escape') setEditingSessionId(null);
+                        }}
+                        autoFocus
+                        className="w-full text-xs font-serif px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-teal-600 focus:outline-none text-stone-800 dark:text-stone-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => handleSaveRename(sess.id, e)}
+                        className="p-1 text-teal-700 dark:text-teal-400 hover:bg-teal-100 rounded-md cursor-pointer"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingSessionId(null);
+                        }}
+                        className="p-1 text-stone-400 hover:bg-stone-200 rounded-md cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-serif font-medium truncate ${
+                          isActive ? 'text-teal-900 dark:text-teal-200' : 'text-stone-800 dark:text-stone-200'
+                        }`}>
+                          {sess.title}
+                        </span>
+                        {isActive && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-teal-600 text-white font-sans font-semibold shrink-0">
+                            Ativa
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-stone-400 dark:text-stone-500 font-mono mt-0.5 block">
+                        {dateStr}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Ações Rápidas: Renomear e Excluir */}
+                {!isEditing && (
+                  <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => handleStartRename(sess, e)}
+                      title="Renomear conversa"
+                      className="p-1.5 text-stone-400 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    {sessions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSession(sess.id, e)}
+                        title="Excluir conversa"
+                        className="p-1.5 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col h-full flex-1 w-full max-w-5xl mx-auto bg-stone-50 dark:bg-slate-900 sm:border-x border-stone-200/80 dark:border-slate-800 transition-colors duration-300 font-sans text-stone-800 dark:text-stone-100 overflow-hidden">
+    <div
+      className={`flex ${
+        isDocked ? 'flex-row max-w-[1600px]' : 'flex-col max-w-5xl'
+      } h-full flex-1 w-full mx-auto bg-stone-50 dark:bg-slate-900 sm:border-x border-stone-200/80 dark:border-slate-800 transition-all duration-300 font-sans text-stone-800 dark:text-stone-100 overflow-hidden`}
+    >
       {/* MODAL DE CONFIGURAÇÕES DE USUÁRIO */}
       <UserSettingsModal
         isOpen={isSettingsOpen}
@@ -1059,9 +1335,16 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         onGuideNameChanged={(name) => setGuideName(name)}
       />
 
-      {/* GAVETA / DRAWER LATERAL DE SESSÕES & HISTÓRICO DE CONVERSAS */}
+      {/* MODO FIXADO / PINADO (SIDEBAR LATERAL DOCKADA AO LADO DO CHAT EM TELAS DESKTOP) */}
+      {isDocked && (
+        <aside className="w-80 lg:w-84 xl:w-92 shrink-0 h-full border-r border-stone-200/80 dark:border-slate-800 flex flex-col bg-stone-50 dark:bg-slate-900 z-10 transition-all duration-300 overflow-hidden">
+          {renderSidebarContent()}
+        </aside>
+      )}
+
+      {/* MODO FLUTUANTE / DRAWER (QUANDO NÃO ESTÁ FIXADO OU EM TELAS MOBILE) */}
       <AnimatePresence>
-        {isSessionsDrawerOpen && (
+        {!isDocked && isSessionsDrawerOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-start">
             {/* Backdrop com blur escurecido */}
             <motion.div
@@ -1080,242 +1363,50 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
               transition={{ type: 'spring', damping: 26, stiffness: 280 }}
               className="relative w-full max-w-sm sm:max-w-md h-full bg-stone-50 dark:bg-slate-900 border-r border-stone-200 dark:border-slate-800 shadow-2xl flex flex-col z-10 text-stone-800 dark:text-stone-100 font-sans"
             >
-              {/* Header do Drawer */}
-              <div className="p-4 sm:p-5 border-b border-stone-200/80 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-2xl bg-teal-700/10 dark:bg-teal-500/20 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-300">
-                    <History className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-serif font-medium leading-tight text-stone-900 dark:text-stone-50">
-                      Suas Conversas
-                    </h3>
-                    <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                      Organize reflexões por tópico ou momento
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsSessionsDrawerOpen(false)}
-                  className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Banner de Memória Global dos Mentores */}
-              <div className="mx-4 mt-3 p-3 rounded-2xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/40 flex items-start gap-2.5 text-[11px] text-teal-900 dark:text-teal-200 leading-relaxed">
-                <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Memória Contínua Unificada:</strong> Mesmo alternando entre conversas, seus mentores reconhecem toda a sua jornada e histórico sem que você precise se repetir.
-                </span>
-              </div>
-
-              {/* Botão de Criar Nova Sessão */}
-              <div className="p-4 pb-2">
-                <button
-                  type="button"
-                  onClick={handleCreateNewSession}
-                  disabled={isCreatingSession}
-                  className="w-full py-2.5 px-4 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-medium flex items-center justify-center gap-2 shadow-sm transition active:scale-98 cursor-pointer disabled:opacity-50"
-                >
-                  {isCreatingSession ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4" />
-                  )}
-                  <span>Iniciar Nova Reflexão</span>
-                </button>
-              </div>
-
-              {/* Lista de Sessões e Conversas Direcionadas */}
-              <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">
-                {/* SEÇÃO: CONVERSAS DIRECIONADAS DO SISTEMA */}
-                {guidedConversations.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
-                      <Compass className="w-3.5 h-3.5" />
-                      <span>Conversas Direcionadas ({guidedConversations.length})</span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {guidedConversations.map((g) => {
-                        const isCurrent = sessions.find((s) => s.id === activeSessionId)?.title === g.title;
-                        const questionsCount = Array.isArray(g.questions) ? g.questions.length : 0;
-
-                        return (
-                          <div
-                            key={g.id}
-                            onClick={() => handleStartGuidedSession(g)}
-                            className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
-                              isCurrent
-                                ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-400 dark:border-teal-700 shadow-xs'
-                                : 'bg-white dark:bg-slate-800/70 border-stone-200/80 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-800 hover:bg-teal-50/40'
-                            }`}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className="text-[9px] uppercase font-bold text-teal-700 dark:text-teal-400 px-1.5 py-0.2 bg-teal-100/70 dark:bg-teal-900/50 rounded-md">
-                                  {g.category || 'Geral'}
-                                </span>
-                                <span className="text-[10px] text-stone-400">
-                                  {questionsCount} {questionsCount === 1 ? 'pergunta' : 'perguntas'}
-                                </span>
-                              </div>
-                              <h4 className="text-xs font-serif font-medium text-stone-900 dark:text-stone-100 truncate">
-                                {g.title}
-                              </h4>
-                            </div>
-
-                            <ChevronRight className="w-4 h-4 text-stone-400 shrink-0" />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* SEÇÃO: HISTÓRICO DE TÓPICOS DO USUÁRIO */}
-                <div className="space-y-2">
-                  <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400 flex items-center justify-between">
-                    <span>Suas Conversas</span>
-                    <span>{sessions.length} {sessions.length === 1 ? 'tópico' : 'tópicos'}</span>
-                  </div>
-
-                {sessions.map((sess) => {
-                  const isActive = sess.id === activeSessionId;
-                  const isEditing = editingSessionId === sess.id;
-                  const dateStr = new Date(sess.updated_at || sess.created_at).toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: 'short',
-                  });
-
-                  return (
-                    <div
-                      key={sess.id}
-                      onClick={() => !isEditing && handleSelectSession(sess.id)}
-                      className={`group p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                        isActive
-                          ? 'bg-teal-50 dark:bg-teal-950/50 border-teal-300 dark:border-teal-700/80 shadow-xs'
-                          : 'bg-white dark:bg-slate-800/60 border-stone-200/80 dark:border-slate-800 hover:border-stone-300 dark:hover:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        {isEditing ? (
-                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="text"
-                              value={editingTitleText}
-                              onChange={(e) => setEditingTitleText(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveRename(sess.id, e);
-                                if (e.key === 'Escape') setEditingSessionId(null);
-                              }}
-                              autoFocus
-                              className="w-full text-xs font-serif px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-teal-600 focus:outline-none text-stone-800 dark:text-stone-100"
-                            />
-                            <button
-                              type="button"
-                              onClick={(e) => handleSaveRename(sess.id, e)}
-                              className="p-1 text-teal-700 dark:text-teal-400 hover:bg-teal-100 rounded-md cursor-pointer"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingSessionId(null);
-                              }}
-                              className="p-1 text-stone-400 hover:bg-stone-200 rounded-md cursor-pointer"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs font-serif font-medium truncate ${
-                                isActive ? 'text-teal-900 dark:text-teal-200' : 'text-stone-800 dark:text-stone-200'
-                              }`}>
-                                {sess.title}
-                              </span>
-                              {isActive && (
-                                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-teal-600 text-white font-sans font-semibold shrink-0">
-                                  Ativa
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-stone-400 dark:text-stone-500 font-mono mt-0.5 block">
-                              {dateStr}
-                            </span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Ações Rápidas: Renomear e Excluir */}
-                      {!isEditing && (
-                        <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition shrink-0">
-                          <button
-                            type="button"
-                            onClick={(e) => handleStartRename(sess, e)}
-                            title="Renomear conversa"
-                            className="p-1.5 text-stone-400 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          {sessions.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteSession(sess.id, e)}
-                              title="Excluir conversa"
-                              className="p-1.5 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                </div>
-              </div>
+              {renderSidebarContent()}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* HEADER DA SESSÃO */}
-      <header className="px-3 sm:px-6 py-2 sm:py-3.5 pt-safe border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between shrink-0 gap-2">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          {onBackToHome && (
+      {/* ÁREA PRINCIPAL DO CHAT / MENSAGENS (SE AJUSTA AUTOMATICAMENTE AO RESTANTE DA PÁGINA) */}
+      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-all duration-300">
+        {/* HEADER DA SESSÃO */}
+        <header className="px-3 sm:px-6 py-2 sm:py-3.5 pt-safe border-b border-stone-200/80 dark:border-slate-800 bg-stone-50/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between shrink-0 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {onBackToHome && (
+              <button
+                type="button"
+                onClick={onBackToHome}
+                title="Voltar para o Início"
+                className="p-2 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 rounded-xl hover:bg-stone-200/50 dark:hover:bg-slate-800 transition min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* BOTÃO DE MINHAS CONVERSAS (MULTI-SESSÕES) */}
             <button
               type="button"
-              onClick={onBackToHome}
-              title="Voltar para o Início"
-              className="p-2 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 rounded-xl hover:bg-stone-200/50 dark:hover:bg-slate-800 transition min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
+              onClick={() => setIsSessionsDrawerOpen((prev) => !prev)}
+              title={
+                isDocked
+                  ? 'Recolher painel de conversas'
+                  : 'Minhas Conversas & Sessões de Reflexão'
+              }
+              className={`p-2 rounded-xl transition min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0 active:scale-95 cursor-pointer relative border ${
+                isDocked
+                  ? 'bg-teal-700/15 text-teal-800 dark:text-teal-300 border-teal-700/30 dark:border-teal-500/40 shadow-xs'
+                  : 'text-stone-600 dark:text-stone-300 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-800 border-stone-200/80 dark:border-slate-700 shadow-2xs'
+              }`}
             >
-              <ArrowLeft className="w-4 h-4" />
+              <MessageSquare className="w-4 h-4" />
+              {sessions.length > 1 && (
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-teal-700 dark:bg-teal-500 text-[9px] text-white font-mono font-bold shadow-xs">
+                  {sessions.length}
+                </span>
+              )}
             </button>
-          )}
-
-          {/* BOTÃO DE MINHAS CONVERSAS (MULTI-SESSÕES) */}
-          <button
-            type="button"
-            onClick={() => setIsSessionsDrawerOpen(true)}
-            title="Minhas Conversas & Sessões de Reflexão"
-            className="p-2 text-stone-600 dark:text-stone-300 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-800 rounded-xl transition min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0 active:scale-95 cursor-pointer relative border border-stone-200/80 dark:border-slate-700 shadow-2xs"
-          >
-            <MessageSquare className="w-4 h-4" />
-            {sessions.length > 1 && (
-              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-teal-700 dark:bg-teal-500 text-[9px] text-white font-mono font-bold shadow-xs">
-                {sessions.length}
-              </span>
-            )}
-          </button>
 
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-teal-700/10 dark:bg-teal-500/15 border border-teal-700/20 dark:border-teal-500/30 flex items-center justify-center text-teal-800 dark:text-teal-400 shrink-0">
             <Feather className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
@@ -1821,5 +1912,6 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
         </div>
       </footer>
     </div>
-  );
+  </div>
+);
 }
