@@ -12,9 +12,10 @@ import UserSettingsModal from './components/UserSettingsModal';
 import ResetPasswordModal from './components/ResetPasswordModal';
 import SubscriberFeedbackModal from './components/SubscriberFeedbackModal';
 import CreativeTroubleLab from './components/CreativeTroubleLab';
+import TermsOfUseModal, { TERMS_VERSION } from './components/TermsOfUseModal';
 import { AlertTriangle, LifeBuoy } from 'lucide-react';
 import { applyAppTheme, getCurrentTheme } from './services/themeService';
-import { fetchSystemSettings } from './services/adminApi';
+import { fetchSystemSettings, acceptTermsOfUseApi } from './services/adminApi';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -26,6 +27,7 @@ export default function App() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTermsPromptOpen, setIsTermsPromptOpen] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [systemSettings, setSystemSettings] = useState(null);
 
@@ -217,6 +219,28 @@ export default function App() {
     setActiveTab('landing');
   };
 
+  // Verifica se o usuário autenticado precisa aceitar os termos de uso (Clickwrap)
+  useEffect(() => {
+    if (user && profile && !loadingProfile) {
+      if (profile.terms_accepted !== true) {
+        setIsTermsPromptOpen(true);
+      } else {
+        setIsTermsPromptOpen(false);
+      }
+    }
+  }, [user, profile, loadingProfile]);
+
+  const handleAcceptTerms = async () => {
+    if (!user) return;
+    try {
+      await acceptTermsOfUseApi({ userId: user.id, termsVersion: TERMS_VERSION });
+      setProfile((prev) => (prev ? { ...prev, terms_accepted: true } : prev));
+      setIsTermsPromptOpen(false);
+    } catch (err) {
+      console.error('Erro ao aceitar termos de uso:', err);
+    }
+  };
+
   const handleAuthSuccess = (loggedUser) => {
     setUser(loggedUser);
     loadUserProfile(loggedUser);
@@ -319,6 +343,7 @@ export default function App() {
           <LandingPage
             onStartChat={handleStartChat}
             user={user}
+            systemSettings={systemSettings}
           />
         )}
 
@@ -469,6 +494,7 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         user={user}
         profile={profile}
+        systemSettings={systemSettings}
       />
 
 
@@ -479,6 +505,16 @@ export default function App() {
         user={user}
         profile={profile}
       />
+
+      {/* MODAL JURÍDICO DE TERMOS OBRIGATÓRIOS PARA USUÁRIOS LOGADOS */}
+      {user && profile && (
+        <TermsOfUseModal
+          isOpen={isTermsPromptOpen}
+          onClose={() => setIsTermsPromptOpen(false)}
+          onAccept={handleAcceptTerms}
+          alreadyAccepted={profile.terms_accepted === true}
+        />
+      )}
     </div>
   );
 }

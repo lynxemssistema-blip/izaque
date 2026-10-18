@@ -1158,6 +1158,13 @@ export async function fetchSystemSettings() {
     show_theme_selector: true,
     show_settings_button: true,
     show_ambient_sound_button: true,
+    show_creative_troubles: true,
+    show_landing_creator: true,
+    show_landing_sensations: true,
+    show_landing_features: true,
+    show_landing_security: true,
+    show_landing_steps: true,
+    show_landing_cta: true,
     default_theme: 'gold',
     default_guide_name: 'Izaque',
     default_ambient_track: '432hz',
@@ -1199,5 +1206,78 @@ export async function updateSystemSettings(settings) {
   if (error) throw error;
   return data;
 }
+
+/**
+ * TERMOS E CONDIÇÕES DE USO (CLICKWRAP COM AUDITORIA FORENSE)
+ */
+export async function acceptTermsOfUseApi({ userId, termsVersion = 'v1.0-beta-2026' }) {
+  // 1. Tenta via backend Hermes (que captura IP real e headers)
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/terms/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, termsVersion }),
+    });
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  // 2. Fallback direto ao Supabase (garantia técnica client-side)
+  const now = new Date().toISOString();
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Navegador Web';
+
+  try {
+    await supabase.from('izaque_terms_acceptances').insert({
+      user_id: userId,
+      terms_version: termsVersion,
+      accepted: true,
+      accepted_at: now,
+      user_agent: userAgent,
+      ip_address: 'client-browser-direct',
+    });
+  } catch (err) {
+    console.warn('Erro ao inserir log de termos via Supabase:', err);
+  }
+
+  const { data, error } = await supabase
+    .from('izaque_profiles')
+    .update({
+      terms_accepted: true,
+      terms_accepted_at: now,
+      terms_version: termsVersion,
+      updated_at: now,
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { success: true, profile: data, timestamp: now };
+}
+
+export async function fetchTermsAcceptanceLogs() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/terms/logs`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  const { data, error } = await supabase
+    .from('izaque_terms_acceptances')
+    .select(`
+      *,
+      profile:izaque_profiles(full_name, email)
+    `)
+    .order('accepted_at', { ascending: false })
+    .limit(100);
+
+  if (error) throw error;
+  return data || [];
+}
+
 
 

@@ -1955,6 +1955,13 @@ export async function getSystemSettings(req, res) {
       show_theme_selector: true,
       show_settings_button: true,
       show_ambient_sound_button: true,
+      show_creative_troubles: true,
+      show_landing_creator: true,
+      show_landing_sensations: true,
+      show_landing_features: true,
+      show_landing_security: true,
+      show_landing_steps: true,
+      show_landing_cta: true,
       default_theme: 'gold',
       default_guide_name: 'Izaque',
       default_ambient_track: '432hz',
@@ -1965,7 +1972,16 @@ export async function getSystemSettings(req, res) {
       default_immersive_voice: false,
     };
 
-    res.status(200).json(settings);
+    res.status(200).json({
+      ...settings,
+      show_creative_troubles: settings.show_creative_troubles !== undefined ? settings.show_creative_troubles : true,
+      show_landing_creator: settings.show_landing_creator !== undefined ? settings.show_landing_creator : true,
+      show_landing_sensations: settings.show_landing_sensations !== undefined ? settings.show_landing_sensations : true,
+      show_landing_features: settings.show_landing_features !== undefined ? settings.show_landing_features : true,
+      show_landing_security: settings.show_landing_security !== undefined ? settings.show_landing_security : true,
+      show_landing_steps: settings.show_landing_steps !== undefined ? settings.show_landing_steps : true,
+      show_landing_cta: settings.show_landing_cta !== undefined ? settings.show_landing_cta : true,
+    });
   } catch (error) {
     console.error('❌ Erro ao buscar parâmetros do sistema:', error);
     res.status(200).json({
@@ -1973,6 +1989,13 @@ export async function getSystemSettings(req, res) {
       show_theme_selector: true,
       show_settings_button: true,
       show_ambient_sound_button: true,
+      show_creative_troubles: true,
+      show_landing_creator: true,
+      show_landing_sensations: true,
+      show_landing_features: true,
+      show_landing_security: true,
+      show_landing_steps: true,
+      show_landing_cta: true,
       default_theme: 'gold',
       default_guide_name: 'Izaque',
       default_ambient_track: '432hz',
@@ -1995,6 +2018,13 @@ export async function updateSystemSettings(req, res) {
       show_theme_selector,
       show_settings_button,
       show_ambient_sound_button,
+      show_creative_troubles,
+      show_landing_creator,
+      show_landing_sensations,
+      show_landing_features,
+      show_landing_security,
+      show_landing_steps,
+      show_landing_cta,
       default_theme,
       default_guide_name,
       default_ambient_track,
@@ -2011,6 +2041,13 @@ export async function updateSystemSettings(req, res) {
       show_theme_selector: show_theme_selector !== undefined ? Boolean(show_theme_selector) : true,
       show_settings_button: show_settings_button !== undefined ? Boolean(show_settings_button) : true,
       show_ambient_sound_button: show_ambient_sound_button !== undefined ? Boolean(show_ambient_sound_button) : true,
+      show_creative_troubles: show_creative_troubles !== undefined ? Boolean(show_creative_troubles) : true,
+      show_landing_creator: show_landing_creator !== undefined ? Boolean(show_landing_creator) : true,
+      show_landing_sensations: show_landing_sensations !== undefined ? Boolean(show_landing_sensations) : true,
+      show_landing_features: show_landing_features !== undefined ? Boolean(show_landing_features) : true,
+      show_landing_security: show_landing_security !== undefined ? Boolean(show_landing_security) : true,
+      show_landing_steps: show_landing_steps !== undefined ? Boolean(show_landing_steps) : true,
+      show_landing_cta: show_landing_cta !== undefined ? Boolean(show_landing_cta) : true,
       default_theme: default_theme || 'gold',
       default_guide_name: default_guide_name || 'Izaque',
       default_ambient_track: default_ambient_track || '432hz',
@@ -2036,6 +2073,96 @@ export async function updateSystemSettings(req, res) {
     res.status(500).json({ error: 'Erro ao salvar parâmetros avançados: ' + error.message });
   }
 }
+
+/**
+ * 60. Aceitar Termos de Uso (Clickwrap com validade jurídica forense)
+ * POST /api/terms/accept
+ */
+export async function acceptTermsOfUse(req, res) {
+  try {
+    const { userId, termsVersion } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'userId é obrigatório.' });
+    }
+
+    const clientIp = req.headers['x-forwarded-for']
+      ? req.headers['x-forwarded-for'].split(',')[0].trim()
+      : req.socket?.remoteAddress || req.ip || '127.0.0.1';
+
+    const userAgent = req.headers['user-agent'] || 'Navegador Web';
+    const version = termsVersion || 'v1.0-beta-2026';
+    const now = new Date().toISOString();
+
+    // 1. Grava na tabela de auditoria forense
+    const { error: logError } = await supabaseAdmin
+      .from('izaque_terms_acceptances')
+      .insert({
+        user_id: userId,
+        terms_version: version,
+        accepted: true,
+        accepted_at: now,
+        ip_address: clientIp,
+        user_agent: userAgent,
+      });
+
+    if (logError) {
+      console.warn('⚠️ Erro ao registrar log forense de termos:', logError);
+    }
+
+    // 2. Atualiza no perfil do usuário em public.izaque_profiles
+    const { data: updatedProfile, error: profileError } = await supabaseAdmin
+      .from('izaque_profiles')
+      .update({
+        terms_accepted: true,
+        terms_accepted_at: now,
+        terms_version: version,
+        updated_at: now,
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (profileError) {
+      console.warn('⚠️ Erro ao atualizar perfil com termos:', profileError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Termos de uso aceitos e registrados com prova técnica forense.',
+      timestamp: now,
+      ip: clientIp,
+      version,
+      profile: updatedProfile,
+    });
+  } catch (error) {
+    console.error('❌ Erro no aceite de termos de uso:', error);
+    res.status(500).json({ error: 'Erro ao registrar aceite de termos: ' + error.message });
+  }
+}
+
+/**
+ * 61. Listar logs de auditoria de termos de uso (Superadmin)
+ * GET /api/admin/terms/logs
+ */
+export async function getTermsAcceptanceLogs(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_terms_acceptances')
+      .select(`
+        *,
+        profile:izaque_profiles(full_name, email)
+      `)
+      .order('accepted_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('❌ Erro ao listar logs de termos:', error);
+    res.status(500).json({ error: 'Erro ao buscar logs de termos: ' + error.message });
+  }
+}
+
 
 
 

@@ -8,6 +8,7 @@ export default function MobileBottomNav({
   onOpenSettings,
   user,
   profile,
+  systemSettings,
 }) {
   const isMasterOrAdmin = profile?.role === 'master' || profile?.role === 'admin';
   const guideName = localStorage.getItem('izaque_guide_name') || 'IZAQUE';
@@ -61,24 +62,26 @@ export default function MobileBottomNav({
         </button>
 
         {/* INCÔMODO CRIATIVO */}
-        <button
-          type="button"
-          onClick={() => onNavigate('incomodo')}
-          className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all active:scale-95 min-w-[52px] min-h-[46px] ${
-            activeTab === 'incomodo'
-              ? 'text-teal-800 dark:text-teal-400 font-medium'
-              : 'text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-xl transition ${
-              activeTab === 'incomodo' ? 'bg-teal-700/10 dark:bg-teal-500/20' : ''
+        {systemSettings?.show_creative_troubles !== false && (
+          <button
+            type="button"
+            onClick={() => onNavigate('incomodo')}
+            className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all active:scale-95 min-w-[52px] min-h-[46px] ${
+              activeTab === 'incomodo'
+                ? 'text-teal-800 dark:text-teal-400 font-medium'
+                : 'text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
             }`}
           >
-            <Compass className="w-5 h-5 stroke-[1.75]" />
-          </div>
-          <span className="text-[10px] font-serif mt-0.5">Incômodo</span>
-        </button>
+            <div
+              className={`p-1 rounded-xl transition ${
+                activeTab === 'incomodo' ? 'bg-teal-700/10 dark:bg-teal-500/20' : ''
+              }`}
+            >
+              <Compass className="w-5 h-5 stroke-[1.75]" />
+            </div>
+            <span className="text-[10px] font-serif mt-0.5">Incômodo</span>
+          </button>
+        )}
 
         {/* MEU PERFIL */}
         <button
@@ -101,16 +104,18 @@ export default function MobileBottomNav({
         </button>
 
         {/* PREFERÊNCIAS SENSORIAIS (VOZ & AMBIENTE) */}
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all active:scale-95 min-w-[52px] min-h-[46px] text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300"
-        >
-          <div className="p-1 rounded-xl transition">
-            <Sliders className="w-5 h-5 stroke-[1.75]" />
-          </div>
-          <span className="text-[10px] font-serif mt-0.5">Ajustes</span>
-        </button>
+        {systemSettings?.show_settings_button !== false && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all active:scale-95 min-w-[52px] min-h-[46px] text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300"
+          >
+            <div className="p-1 rounded-xl transition">
+              <Sliders className="w-5 h-5 stroke-[1.75]" />
+            </div>
+            <span className="text-[10px] font-serif mt-0.5">Ajustes</span>
+          </button>
+        )}
 
         {/* SUPER ADMIN (CONDICIONAL) */}
         {isMasterOrAdmin && (

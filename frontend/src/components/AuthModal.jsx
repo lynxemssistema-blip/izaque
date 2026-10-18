@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { supabase } from '../services/supabase';
 import { requestPasswordReset } from '../services/api';
-import { X, Lock, Mail, User, Feather, AlertCircle, ArrowRight, CheckCircle2, LifeBuoy } from 'lucide-react';
+import { acceptTermsOfUseApi } from '../services/adminApi';
+import TermsOfUseModal, { TERMS_VERSION } from './TermsOfUseModal';
+import { X, Lock, Mail, User, Feather, AlertCircle, ArrowRight, CheckCircle2, LifeBuoy, Scale } from 'lucide-react';
 
 export default function AuthModal({ isOpen, onClose, onSuccess }) {
   // 'login' | 'signup' | 'forgot'
@@ -9,6 +11,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [forgotSuccessMsg, setForgotSuccessMsg] = useState('');
@@ -19,12 +23,19 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     setMode(newMode);
     setErrorMsg('');
     setForgotSuccessMsg('');
+    setTermsAccepted(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setForgotSuccessMsg('');
+
+    if (mode === 'signup' && !termsAccepted) {
+      setErrorMsg('É necessário concordar com os Termos e Condições de Uso para criar sua conta.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -45,6 +56,19 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
           },
         });
         if (error) throw error;
+
+        // Grava auditoria forense do aceite do termo com carimbo de tempo e IP
+        if (data?.user) {
+          try {
+            await acceptTermsOfUseApi({
+              userId: data.user.id,
+              termsVersion: TERMS_VERSION,
+            });
+          } catch (termErr) {
+            console.warn('Aviso: falha secundária ao gravar aceite de termos:', termErr);
+          }
+        }
+
         onSuccess(data.user);
         onClose();
       } else if (mode === 'forgot') {
@@ -189,10 +213,34 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             </div>
           )}
 
+          {mode === 'signup' && (
+            <div className="pt-1 pb-1">
+              <label className="flex items-start gap-2.5 text-xs text-stone-600 dark:text-stone-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-teal-700 focus:ring-teal-500 border-stone-300 dark:border-slate-600 dark:bg-slate-800"
+                />
+                <span className="leading-snug">
+                  Li e concordo expressamente com os{' '}
+                  <button
+                    type="button"
+                    onClick={() => setIsTermsModalOpen(true)}
+                    className="font-semibold text-teal-700 dark:text-teal-400 hover:underline cursor-pointer"
+                  >
+                    Termos e Condições de Uso (Versão Beta)
+                  </button>
+                  .
+                </span>
+              </label>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
-            className="w-full mt-2 py-3.5 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-md shadow-teal-700/20 transition duration-150 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 min-h-[44px]"
+            disabled={loading || (mode === 'signup' && !termsAccepted)}
+            className="w-full mt-2 py-3.5 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-medium text-sm tracking-wide shadow-md shadow-teal-700/20 transition duration-150 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 min-h-[44px]"
           >
             {loading ? (
               <span>
@@ -256,6 +304,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
           </div>
         </div>
       </div>
+
+      {/* MODAL JURÍDICO DOS TERMOS DE USO */}
+      <TermsOfUseModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+        onAccept={() => setTermsAccepted(true)}
+      />
     </div>
   );
 }

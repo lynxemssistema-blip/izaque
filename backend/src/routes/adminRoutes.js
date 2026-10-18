@@ -58,6 +58,8 @@ import {
   getProjectNotificationsLog,
   getSystemSettings,
   updateSystemSettings,
+  acceptTermsOfUse,
+  getTermsAcceptanceLogs,
 } from '../controllers/adminController.js';
 
 const router = Router();
@@ -146,6 +148,10 @@ router.get('/admin/project/notifications-log', getProjectNotificationsLog);
 router.get('/system/settings', getSystemSettings);
 router.get('/admin/system/settings', getSystemSettings);
 router.put('/admin/system/settings', updateSystemSettings);
+
+// Termos e Condições de Uso (Clickwrap com validade jurídica)
+router.post('/terms/accept', acceptTermsOfUse);
+router.get('/admin/terms/logs', getTermsAcceptanceLogs);
 
 export default router;
 

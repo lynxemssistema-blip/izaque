@@ -108,23 +108,25 @@ export default function Navbar({
             )}
           </button>
 
-          <button
-            onClick={() => {
-              if (!user) {
-                onOpenAuth();
-              } else {
-                setActiveTab('incomodo');
-              }
-            }}
-            className={`px-4 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
-              activeTab === 'incomodo'
-                ? 'bg-teal-700 dark:bg-teal-600 text-white shadow-sm'
-                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
-            }`}
-          >
-            <Compass className="w-3.5 h-3.5" />
-            Incômodo Criativo
-          </button>
+          {systemSettings?.show_creative_troubles !== false && (
+            <button
+              onClick={() => {
+                if (!user) {
+                  onOpenAuth();
+                } else {
+                  setActiveTab('incomodo');
+                }
+              }}
+              className={`px-4 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
+                activeTab === 'incomodo'
+                  ? 'bg-teal-700 dark:bg-teal-600 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              Incômodo Criativo
+            </button>
+          )}
 
           {isMasterOrAdmin && (
             <button
