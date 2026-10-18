@@ -357,19 +357,45 @@ SUA PRIORIDADE MÁXIMA E INEGOCIÁVEL NESTA INTERAÇÃO É DIRECIONAR A CONVERSA
 3. FIRMEZA CONTRA DISPERSÕES E EVASÕES: Se o usuário divagar, contar histórias paralelas que fujam do cerne, ou tentar mudar de assunto, acolha brevemente, mas não se perca na dispersão. Traga-o com carinho, autoridade de mentor e firmeza de volta ao tema central e à pergunta da vez.
 4. UMA PERGUNTA POR VEZ: NUNCA faça mais de uma pergunta de uma só vez nem despeje o questionário inteiro. Avance ordenadamente, dando espaço para o usuário digerir e responder cada etapa.
 5. CONSCIÊNCIA DE PROGRESSO NO HISTÓRICO: Examine o histórico recente da conversa para identificar quais perguntas das listadas acima o usuário já respondeu com substância. Direcione o seu foco para a PRÓXIMA pergunta ainda não respondida.
-6. FECHAMENTO PRÁTICO: Quando todas as perguntas do roteiro forem respondidas, consolide os pontos fortes revelados pelo usuário e encerre a conversa com uma reflexão final inspiradora e uma ação prática para as próximas 24 horas.`;
+6. FECHAMENTO PRÁTICO: Quando todas as perguntas do roteiro forem respondidas, consolide os pontos fortes revelados pelo usuário e encerre a conversa com uma reflexão inspiradora e uma micro-ação prática para as próximas 24 horas.`;
       }
     }
   } catch (gErr) {
     console.warn('⚠️ Falha ao carregar contexto de conversa direcionada:', gErr.message);
   }
 
-  // 5. Monta o Super-Prompt com Persona + Conhecimento Técnico + Memórias Pessoais + Diretriz Direcionada
+  // 4.5 Injeta Incômodos Criativos Ativos do Usuário (Metodologia do Mentor Thiago Prata)
+  let creativeTroublesText = '';
+  if (userId) {
+    try {
+      const { data: activeTroubles } = await supabaseAdmin
+        .from('izaque_creative_troubles')
+        .select('title, fact_description, posture_level, internal_state, intensity_score, relevance_score, responsibility_score, influence_score, micro_action_24h, status, created_at')
+        .eq('user_id', userId)
+        .eq('status', 'ativo')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (activeTroubles && activeTroubles.length > 0) {
+        const troublesList = activeTroubles.map((t, idx) => 
+          '[' + (idx + 1) + '] "' + t.title + '": Fato="' + (t.fact_description || '') + '" | Postura=[Nível ' + (t.posture_level || 1) + '] | Hawkins="' + (t.internal_state || '') + '" | IRRI (I:' + (t.intensity_score || 3) + ', R:' + (t.relevance_score || 3) + ', Resp:' + (t.responsibility_score || 3) + ', Inf:' + (t.influence_score || 3) + ') | Micro-ação 24h="' + (t.micro_action_24h || 'Pendente') + '"'
+        ).join('\n');
+
+        creativeTroublesText = '\n\nINCÔMODOS CRIATIVOS ATIVOS DO USUÁRIO (LABORATÓRIO DO INCÔMODO CRIATIVO):\nO usuário está trabalhando ativamente nas seguintes questões na metodologia do mentor Thiago Prata:\n' + troublesList + '\nIntegre essas informações com sensibilidade para apoiar o usuário, incentivar a postura ativa e acompanhar o compromisso da micro-ação de 24 horas.\n';
+      }
+    } catch (ctErr) {
+      console.warn('⚠️ Falha ao buscar incômodos criativos para o contexto do chat:', ctErr.message);
+    }
+  }
+
+  // 5. Monta o Super-Prompt com Persona + Conhecimento Técnico + Memórias Pessoais + Diretriz Direcionada + Incômodos
   const fullSystemInstruction = `${selectedAgent.system_prompt}
 
 ${knowledgeText}
 
 ${memoriesText}
+
+${creativeTroublesText}
 
 ${guidedInstruction}
 

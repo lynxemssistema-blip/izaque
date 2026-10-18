@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import chatRoutes from './routes/chatRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import creativeTroubleRoutes from './routes/creativeTroubleRoutes.js';
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ app.get('/api/health', healthHandler);
 // Rotas da API
 app.use('/api', chatRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', creativeTroubleRoutes);
 
 // Servir frontend compilado em produção se o diretório dist existir
 if (fs.existsSync(distPath)) {

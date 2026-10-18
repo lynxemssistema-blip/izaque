@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, MessageSquareHeart, User, Sliders, Shield, Heart } from 'lucide-react';
+import { Home, MessageSquareHeart, User, Sliders, Shield, Heart, Compass } from 'lucide-react';
 
 export default function MobileBottomNav({
   activeTab,
@@ -58,6 +58,26 @@ export default function MobileBottomNav({
             <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400 animate-pulse" />
           </div>
           <span className="text-[10px] font-serif mt-0.5">Sessão</span>
+        </button>
+
+        {/* INCÔMODO CRIATIVO */}
+        <button
+          type="button"
+          onClick={() => onNavigate('incomodo')}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all active:scale-95 min-w-[52px] min-h-[46px] ${
+            activeTab === 'incomodo'
+              ? 'text-teal-800 dark:text-teal-400 font-medium'
+              : 'text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
+          }`}
+        >
+          <div
+            className={`p-1 rounded-xl transition ${
+              activeTab === 'incomodo' ? 'bg-teal-700/10 dark:bg-teal-500/20' : ''
+            }`}
+          >
+            <Compass className="w-5 h-5 stroke-[1.75]" />
+          </div>
+          <span className="text-[10px] font-serif mt-0.5">Incômodo</span>
         </button>
 
         {/* MEU PERFIL */}

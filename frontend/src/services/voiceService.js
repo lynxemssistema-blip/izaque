@@ -18,7 +18,7 @@ class HumanVoiceService {
   constructor() {
     this.currentUtterance = null;
     this.isPlaying = false;
-    this.keepAliveInterval = null;
+    this.currentSessionId = 0;
   }
 
   /**
@@ -231,13 +231,13 @@ class HumanVoiceService {
     const clean = cleanTextForSpeech(text);
     if (!clean) return [];
 
-    // Divide por pontuação mantendo a pontuação final de cada frase
-    const rawMatches = clean.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g);
+    // Divide por pontuação (. ! ? :) evitando cortes repetitivos
+    const rawMatches = clean.match(/[^.!?:\n]+[.!?:\n]+|[^.!?:\n]+$/g);
     if (!rawMatches) return [clean];
 
     return rawMatches
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+      .map((s) => s.replace(/[\n\r]+/g, ' ').trim())
+      .filter((s) => s.length > 1);
   }
 
   /**
@@ -249,7 +249,9 @@ class HumanVoiceService {
       return;
     }
 
+    // Cancela qualquer reprodução anterior e gera ID único de sessão
     this.stop();
+    const currentSession = ++this.currentSessionId;
 
     const sentences = this.splitIntoSentences(text);
     if (sentences.length === 0) {
@@ -263,18 +265,13 @@ class HumanVoiceService {
     this.isPlaying = true;
     let sentenceIndex = 0;
 
-    // Keep-alive para evitar congelamento de 15s no Chrome
-    this.keepAliveInterval = setInterval(() => {
-      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-        window.speechSynthesis.pause();
-        window.speechSynthesis.resume();
-      }
-    }, 10000);
-
     const speakNext = () => {
-      if (!this.isPlaying || sentenceIndex >= sentences.length) {
-        this.stop();
-        onEnd?.();
+      // Se a sessão mudou ou parou, encerra sem duplicar fala
+      if (this.currentSessionId !== currentSession || !this.isPlaying || sentenceIndex >= sentences.length) {
+        if (this.currentSessionId === currentSession) {
+          this.isPlaying = false;
+          onEnd?.();
+        }
         return;
       }
 
@@ -285,23 +282,28 @@ class HumanVoiceService {
       utterance.lang = voice?.lang || 'pt-BR';
       if (voice) utterance.voice = voice;
 
-      utterance.rate = Math.max(0.65, Math.min(1.3, settings.rate));
-      utterance.pitch = Math.max(0.75, Math.min(1.3, settings.pitch));
+      utterance.rate = Math.max(0.70, Math.min(1.25, settings.rate));
+      utterance.pitch = Math.max(0.75, Math.min(1.25, settings.pitch));
 
       utterance.onstart = () => {
+        if (this.currentSessionId !== currentSession) return;
         if (sentenceIndex === 1) {
           onStart?.();
         }
       };
 
       utterance.onend = () => {
-        // Pausa respiratória natural entre frases (80ms a 140ms)
+        if (this.currentSessionId !== currentSession) return;
+        // Pausa respiratória natural entre frases (70ms)
         setTimeout(() => {
-          speakNext();
-        }, 110);
+          if (this.currentSessionId === currentSession) {
+            speakNext();
+          }
+        }, 70);
       };
 
       utterance.onerror = (e) => {
+        if (this.currentSessionId !== currentSession) return;
         if (e.error === 'canceled' || e.error === 'interrupted') {
           return;
         }
@@ -313,19 +315,21 @@ class HumanVoiceService {
       window.speechSynthesis.speak(utterance);
     };
 
-    // Pequeno timeout síncrono para garantir execução estável
-    setTimeout(speakNext, 40);
+    // Pequeno intervalo antes de disparar para permitir o cancel() anterior ser processado
+    setTimeout(() => {
+      if (this.currentSessionId === currentSession) {
+        speakNext();
+      }
+    }, 60);
   }
 
   /**
    * Para imediatamente qualquer fala em andamento
    */
   stop() {
+    this.currentSessionId++;
     this.isPlaying = false;
-    if (this.keepAliveInterval) {
-      clearInterval(this.keepAliveInterval);
-      this.keepAliveInterval = null;
-    }
+    this.currentUtterance = null;
     if (this.isSupported()) {
       window.speechSynthesis.cancel();
     }

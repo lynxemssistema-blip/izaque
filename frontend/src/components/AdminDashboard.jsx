@@ -61,6 +61,7 @@ import AdminBroadcastEmail from './AdminBroadcastEmail';
 import AdminGuidedConversations from './AdminGuidedConversations';
 import AdminUserGroups from './AdminUserGroups';
 import AdminProjectPlanning from './AdminProjectPlanning';
+import AdminCreativeTroubles from './AdminCreativeTroubles';
 
 export default function AdminDashboard({ currentUser }) {
   const [activeTab, setActiveTab] = useState('metrics'); // 'users' | 'plans' | 'subscriptions' | 'feedbacks' | 'memories' | 'agents' | 'help' | 'broadcast'
@@ -655,6 +656,18 @@ export default function AdminDashboard({ currentUser }) {
             >
               <Calendar className="w-3.5 h-3.5 text-teal-400" />
               <span>Gestão do Projeto</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('creative_troubles')}
+              className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'creative_troubles'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5 text-amber-400" />
+              <span>Incômodo Criativo (Diagnósticos)</span>
             </button>
 
             <button
@@ -1779,6 +1792,11 @@ export default function AdminDashboard({ currentUser }) {
         {/* ABA 11: GESTÃO E CRONOGRAMA DO PROJETO */}
         {activeTab === 'project' && (
           <AdminProjectPlanning currentUser={currentUser} />
+        )}
+
+        {/* ABA 12: PRONTUÁRIOS E DIAGNÓSTICOS DO INCÔMODO CRIATIVO */}
+        {activeTab === 'creative_troubles' && (
+          <AdminCreativeTroubles currentUser={currentUser} />
         )}
 
         {/* MODAL PARA CRIAR AGENTE */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Feather, Shield, Wind, LogOut, Heart, Home, Edit3, Sparkles, LifeBuoy, Sliders, Palette } from 'lucide-react';
+import { Feather, Shield, Wind, LogOut, Heart, Home, Edit3, Sparkles, LifeBuoy, Sliders, Palette, Compass } from 'lucide-react';
 import { THEMES, saveAppTheme, getCurrentTheme } from '../services/themeService';
 import { updateUserProfile } from '../services/api';
 import UserNotificationsPopover from './UserNotificationsPopover';
@@ -105,6 +105,24 @@ export default function Navbar({
                 Entrar
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => {
+              if (!user) {
+                onOpenAuth();
+              } else {
+                setActiveTab('incomodo');
+              }
+            }}
+            className={`px-4 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
+              activeTab === 'incomodo'
+                ? 'bg-teal-700 dark:bg-teal-600 text-white shadow-sm'
+                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            Incômodo Criativo
           </button>
 
           {isMasterOrAdmin && (
