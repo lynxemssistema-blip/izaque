@@ -14,6 +14,7 @@ import SubscriberFeedbackModal from './components/SubscriberFeedbackModal';
 import CreativeTroubleLab from './components/CreativeTroubleLab';
 import { AlertTriangle, LifeBuoy } from 'lucide-react';
 import { applyAppTheme, getCurrentTheme } from './services/themeService';
+import { fetchSystemSettings } from './services/adminApi';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -26,6 +27,7 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [systemSettings, setSystemSettings] = useState(null);
 
   // Estado do Onboarding do Guia
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -98,8 +100,50 @@ export default function App() {
   }, [activeTab]);
 
   useEffect(() => {
-    // Inicializa tema visual individual do usuário
-    applyAppTheme(getCurrentTheme());
+    // Carrega Parâmetros Globais do Sistema (Superadmin)
+    fetchSystemSettings().then((res) => {
+      if (res) {
+        setSystemSettings(res);
+        const savedTheme = localStorage.getItem('izaque_app_theme');
+        // Se o Superadmin ocultou a seleção de temas ou se ainda não há tema salvo, aplica o padrão global (gold)
+        const themeToApply = (!res.show_theme_selector || !savedTheme)
+          ? (res.default_theme || 'gold')
+          : savedTheme;
+        applyAppTheme(themeToApply);
+        localStorage.setItem('izaque_app_theme', themeToApply);
+
+        // Define trilha e voz padrão se o usuário for novo
+        if (!localStorage.getItem('izaque_ambient_track') && res.default_ambient_track) {
+          localStorage.setItem('izaque_ambient_track', res.default_ambient_track);
+        }
+        if (!localStorage.getItem('izaque_gemini_voice') && res.default_gemini_voice) {
+          localStorage.setItem('izaque_gemini_voice', res.default_gemini_voice);
+        }
+        if (!localStorage.getItem('izaque_voice_engine') && res.default_voice_engine) {
+          localStorage.setItem('izaque_voice_engine', res.default_voice_engine);
+        }
+        if (!localStorage.getItem('izaque_guide_name') && res.default_guide_name) {
+          localStorage.setItem('izaque_guide_name', res.default_guide_name);
+          setGuideName(res.default_guide_name);
+        }
+      } else {
+        applyAppTheme(getCurrentTheme());
+      }
+    }).catch(() => {
+      applyAppTheme(getCurrentTheme());
+    });
+
+    const handleSystemSettingsUpdated = (e) => {
+      if (e.detail) {
+        setSystemSettings(e.detail);
+        if (!e.detail.show_theme_selector && e.detail.default_theme) {
+          applyAppTheme(e.detail.default_theme);
+          localStorage.setItem('izaque_app_theme', e.detail.default_theme);
+        }
+      }
+    };
+    window.addEventListener('system-settings-updated', handleSystemSettingsUpdated);
+
     const handleThemeChange = (e) => {
       if (e.detail) applyAppTheme(e.detail);
     };
@@ -265,6 +309,7 @@ export default function App() {
           onOpenProfile={() => setIsProfileOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenFeedback={() => setIsFeedbackOpen(true)}
+          systemSettings={systemSettings}
         />
       </div>
 
@@ -284,6 +329,7 @@ export default function App() {
                 user={profile || user}
                 onEditGuideName={() => setShowOnboarding(true)}
                 onBackToHome={() => setActiveTab('landing')}
+                systemSettings={systemSettings}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center p-6 text-center">

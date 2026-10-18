@@ -1936,6 +1936,108 @@ export async function getProjectNotificationsLog(req, res) {
   }
 }
 
+/**
+ * 58. Obter parâmetros globais avançados do sistema
+ * GET /api/system/settings
+ */
+export async function getSystemSettings(req, res) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('izaque_system_settings')
+      .select('*')
+      .eq('id', 'global')
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    const settings = data || {
+      id: 'global',
+      show_theme_selector: true,
+      show_settings_button: true,
+      show_ambient_sound_button: true,
+      default_theme: 'gold',
+      default_guide_name: 'Izaque',
+      default_ambient_track: '432hz',
+      default_ambient_volume: 0.20,
+      default_ambient_enabled: false,
+      default_voice_engine: 'gemini',
+      default_gemini_voice: 'Charon',
+      default_immersive_voice: false,
+    };
+
+    res.status(200).json(settings);
+  } catch (error) {
+    console.error('❌ Erro ao buscar parâmetros do sistema:', error);
+    res.status(200).json({
+      id: 'global',
+      show_theme_selector: true,
+      show_settings_button: true,
+      show_ambient_sound_button: true,
+      default_theme: 'gold',
+      default_guide_name: 'Izaque',
+      default_ambient_track: '432hz',
+      default_ambient_volume: 0.20,
+      default_ambient_enabled: false,
+      default_voice_engine: 'gemini',
+      default_gemini_voice: 'Charon',
+      default_immersive_voice: false,
+    });
+  }
+}
+
+/**
+ * 59. Atualizar parâmetros globais avançados do sistema (Superadmin apenas)
+ * PUT /api/admin/system/settings
+ */
+export async function updateSystemSettings(req, res) {
+  try {
+    const {
+      show_theme_selector,
+      show_settings_button,
+      show_ambient_sound_button,
+      default_theme,
+      default_guide_name,
+      default_ambient_track,
+      default_ambient_volume,
+      default_ambient_enabled,
+      default_voice_engine,
+      default_gemini_voice,
+      default_immersive_voice,
+      updated_by,
+    } = req.body;
+
+    const payload = {
+      id: 'global',
+      show_theme_selector: show_theme_selector !== undefined ? Boolean(show_theme_selector) : true,
+      show_settings_button: show_settings_button !== undefined ? Boolean(show_settings_button) : true,
+      show_ambient_sound_button: show_ambient_sound_button !== undefined ? Boolean(show_ambient_sound_button) : true,
+      default_theme: default_theme || 'gold',
+      default_guide_name: default_guide_name || 'Izaque',
+      default_ambient_track: default_ambient_track || '432hz',
+      default_ambient_volume: default_ambient_volume !== undefined ? Number(default_ambient_volume) : 0.20,
+      default_ambient_enabled: default_ambient_enabled !== undefined ? Boolean(default_ambient_enabled) : false,
+      default_voice_engine: default_voice_engine || 'gemini',
+      default_gemini_voice: default_gemini_voice || 'Charon',
+      default_immersive_voice: default_immersive_voice !== undefined ? Boolean(default_immersive_voice) : false,
+      updated_at: new Date().toISOString(),
+      updated_by: updated_by || null,
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from('izaque_system_settings')
+      .upsert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('❌ Erro ao salvar parâmetros do sistema:', error);
+    res.status(500).json({ error: 'Erro ao salvar parâmetros avançados: ' + error.message });
+  }
+}
+
+
 
 
 

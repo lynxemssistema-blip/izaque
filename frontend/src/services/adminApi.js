@@ -1126,3 +1126,78 @@ export async function fetchProjectNotificationsLog() {
   return data || [];
 }
 
+/**
+ * PARÂMETROS AVANÇADOS GLOBAIS DO SISTEMA (SUPERADMIN)
+ */
+export async function fetchSystemSettings() {
+  // 1. Tenta via backend Hermes
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/system/settings`);
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  // 2. Fallback direto ao Supabase
+  try {
+    const { data, error } = await supabase
+      .from('izaque_system_settings')
+      .select('*')
+      .eq('id', 'global')
+      .maybeSingle();
+
+    if (!error && data) return data;
+  } catch (err) {
+    console.warn('Erro no fallback de parâmetros Supabase:', err);
+  }
+
+  // Fallback seguro caso não haja conexão
+  return {
+    id: 'global',
+    show_theme_selector: true,
+    show_settings_button: true,
+    show_ambient_sound_button: true,
+    default_theme: 'gold',
+    default_guide_name: 'Izaque',
+    default_ambient_track: '432hz',
+    default_ambient_volume: 0.20,
+    default_ambient_enabled: false,
+    default_voice_engine: 'gemini',
+    default_gemini_voice: 'Charon',
+    default_immersive_voice: false,
+  };
+}
+
+export async function updateSystemSettings(settings) {
+  // 1. Tenta via backend Hermes
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/system/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return await res.json();
+    }
+  } catch {}
+
+  // 2. Fallback direto ao Supabase
+  const payload = {
+    id: 'global',
+    ...settings,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('izaque_system_settings')
+    .upsert(payload)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+

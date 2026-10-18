@@ -52,6 +52,7 @@ import {
   deleteUserSession,
   fetchPublicGuidedConversations,
 } from '../services/api';
+import { fetchSystemSettings } from '../services/adminApi';
 import { ambientAudio } from '../services/ambientAudioService';
 import { humanVoiceService } from '../services/voiceService';
 import { THEMES, saveAppTheme, getCurrentTheme } from '../services/themeService';
@@ -154,7 +155,29 @@ function VoiceReflectionButton({ text, messageId, isPlaying, isAudioLoading, onT
   );
 }
 
-export default function ReflectionSpace({ user, onEditGuideName, onBackToHome }) {
+export default function ReflectionSpace({ user, onEditGuideName, onBackToHome, systemSettings: propSystemSettings }) {
+  const [systemSettings, setSystemSettings] = useState(propSystemSettings || null);
+
+  useEffect(() => {
+    if (propSystemSettings) {
+      setSystemSettings(propSystemSettings);
+    } else {
+      fetchSystemSettings().then((res) => {
+        if (res) setSystemSettings(res);
+      }).catch(() => {});
+    }
+
+    const handleSettingsUpdated = (e) => {
+      if (e.detail) setSystemSettings(e.detail);
+    };
+    window.addEventListener('system-settings-updated', handleSettingsUpdated);
+    return () => window.removeEventListener('system-settings-updated', handleSettingsUpdated);
+  }, [propSystemSettings]);
+
+  const canShowTheme = systemSettings ? systemSettings.show_theme_selector !== false : true;
+  const canShowSettings = systemSettings ? systemSettings.show_settings_button !== false : true;
+  const canShowAmbient = systemSettings ? systemSettings.show_ambient_sound_button !== false : true;
+
   const [guideName, setGuideName] = useState(() => {
     return localStorage.getItem('izaque_guide_name') || 'Izaque';
   });
@@ -1456,129 +1479,135 @@ export default function ReflectionSpace({ user, onEditGuideName, onBackToHome })
             <span className="hidden sm:inline">Nova Reflexão</span>
           </button>
           {/* ATIVAÇÃO OU DESATIVAÇÃO RÁPIDA DO SOM AMBIENTE */}
-          <button
-            type="button"
-            onClick={handleToggleAmbientQuick}
-            title={
-              isAmbientActive
-                ? `Som Ambiente Ativo (${ambientTrack === 'rain' ? 'Chuva' : '432 Hz'}). Clique para pausar.`
-                : 'Ativar Som Ambiente Terapêutico (Frequência 432 Hz / Chuva)'
-            }
-            className={`px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1.5 border shadow-sm active:scale-95 min-h-[36px] ${
-              isAmbientActive
-                ? 'bg-teal-50 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 border-teal-400 dark:border-teal-700 shadow-teal-700/10'
-                : 'bg-white dark:bg-slate-800 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-slate-700 hover:text-stone-800 dark:hover:text-stone-200 hover:border-stone-300'
-            }`}
-          >
-            {isAmbientActive ? (
-              <>
-                <Volume2 className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400 shrink-0 animate-pulse" />
-                <span className="text-[11px] font-medium hidden xs:inline sm:inline">
-                  {ambientTrack === 'rain' ? 'Chuva' : '432 Hz'}
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-ping shrink-0" />
-              </>
-            ) : (
-              <>
-                <VolumeX className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                <span className="text-[11px] text-stone-500 dark:text-stone-400 hidden xs:inline sm:inline">
-                  Som Ambiente
-                </span>
-              </>
-            )}
-          </button>
-
-          {/* SELETOR RÁPIDO DE TEMA VISUAL */}
-          <div className="relative">
+          {canShowAmbient && (
             <button
               type="button"
-              onClick={() => setIsThemeMenuOpen((prev) => !prev)}
-              title={`Mudar Estilo Visual do Refúgio (Atual: ${THEMES.find((t) => t.id === currentTheme)?.name || 'Esmeralda'})`}
-              className={`p-2 sm:px-3 sm:py-1.5 rounded-full bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-600 dark:text-stone-300 text-xs font-medium transition flex items-center gap-1.5 border shadow-sm active:scale-95 min-h-[36px] min-w-[36px] justify-center ${
-                isThemeMenuOpen ? 'border-teal-600 ring-2 ring-teal-500/30' : 'border-stone-200 dark:border-slate-700'
+              onClick={handleToggleAmbientQuick}
+              title={
+                isAmbientActive
+                  ? `Som Ambiente Ativo (${ambientTrack === 'rain' ? 'Chuva' : '432 Hz'}). Clique para pausar.`
+                  : 'Ativar Som Ambiente Terapêutico (Frequência 432 Hz / Chuva)'
+              }
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1.5 border shadow-sm active:scale-95 min-h-[36px] ${
+                isAmbientActive
+                  ? 'bg-teal-50 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 border-teal-400 dark:border-teal-700 shadow-teal-700/10'
+                  : 'bg-white dark:bg-slate-800 text-stone-500 dark:text-stone-400 border-stone-200 dark:border-slate-700 hover:text-stone-800 dark:hover:text-stone-200 hover:border-stone-300'
               }`}
             >
-              <Palette className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
-              <span className="hidden sm:inline text-[11px]">
-                {THEMES.find((t) => t.id === currentTheme)?.name.split(' ')[1] || 'Tema'}
-              </span>
-            </button>
-
-            {/* POPOVER FLUTUANTE DE TEMAS */}
-            <AnimatePresence>
-              {isThemeMenuOpen && (
+              {isAmbientActive ? (
                 <>
-                  <div
-                    className="fixed inset-0 z-30"
-                    onClick={() => setIsThemeMenuOpen(false)}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -6 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -6 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-56 p-2 rounded-2xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 shadow-2xl z-40 space-y-1 text-stone-800 dark:text-stone-100"
-                  >
-                    <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-                      Estilos Visuais
-                    </div>
-                    {THEMES.map((t) => {
-                      const isSelected = currentTheme === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => {
-                            saveAppTheme(t.id);
-                            setCurrentTheme(t.id);
-                            setIsThemeMenuOpen(false);
-                            if (user?.id) {
-                              updateUserProfile(user.id, {
-                                preferences: {
-                                  ...(user.preferences || {}),
-                                  app_theme: t.id,
-                                },
-                              }).catch(() => {});
-                            }
-                          }}
-                          className={`w-full px-2.5 py-2 rounded-xl text-left text-xs transition flex items-center justify-between gap-2 ${
-                            isSelected
-                              ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 font-semibold'
-                              : 'hover:bg-stone-100 dark:hover:bg-slate-700/60 text-stone-700 dark:text-stone-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-base shrink-0">{t.previewIcon}</span>
-                            <div className="min-w-0 truncate">
-                              <span className="block truncate text-xs">{t.name}</span>
-                              <span className="block truncate text-[10px] text-stone-400 font-normal">
-                                {t.tagline}
-                              </span>
-                            </div>
-                          </div>
-                          <div
-                            className="w-3.5 h-3.5 rounded-full shrink-0 border border-white/50 shadow-xs"
-                            style={{ backgroundColor: t.accent }}
-                          />
-                        </button>
-                      );
-                    })}
-                  </motion.div>
+                  <Volume2 className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400 shrink-0 animate-pulse" />
+                  <span className="text-[11px] font-medium hidden xs:inline sm:inline">
+                    {ambientTrack === 'rain' ? 'Chuva' : '432 Hz'}
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-ping shrink-0" />
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                  <span className="text-[11px] text-stone-500 dark:text-stone-400 hidden xs:inline sm:inline">
+                    Som Ambiente
+                  </span>
                 </>
               )}
-            </AnimatePresence>
-          </div>
+            </button>
+          )}
+
+          {/* SELETOR RÁPIDO DE TEMA VISUAL */}
+          {canShowTheme && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsThemeMenuOpen((prev) => !prev)}
+                title={`Mudar Estilo Visual do Refúgio (Atual: ${THEMES.find((t) => t.id === currentTheme)?.name || 'Esmeralda'})`}
+                className={`p-2 sm:px-3 sm:py-1.5 rounded-full bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-600 dark:text-stone-300 text-xs font-medium transition flex items-center gap-1.5 border shadow-sm active:scale-95 min-h-[36px] min-w-[36px] justify-center ${
+                  isThemeMenuOpen ? 'border-teal-600 ring-2 ring-teal-500/30' : 'border-stone-200 dark:border-slate-700'
+                }`}
+              >
+                <Palette className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                <span className="hidden sm:inline text-[11px]">
+                  {THEMES.find((t) => t.id === currentTheme)?.name.split(' ')[1] || 'Tema'}
+                </span>
+              </button>
+
+              {/* POPOVER FLUTUANTE DE TEMAS */}
+              <AnimatePresence>
+                {isThemeMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setIsThemeMenuOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-56 p-2 rounded-2xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 shadow-2xl z-40 space-y-1 text-stone-800 dark:text-stone-100"
+                    >
+                      <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                        Estilos Visuais
+                      </div>
+                      {THEMES.map((t) => {
+                        const isSelected = currentTheme === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              saveAppTheme(t.id);
+                              setCurrentTheme(t.id);
+                              setIsThemeMenuOpen(false);
+                              if (user?.id) {
+                                updateUserProfile(user.id, {
+                                  preferences: {
+                                    ...(user.preferences || {}),
+                                    app_theme: t.id,
+                                  },
+                                }).catch(() => {});
+                              }
+                            }}
+                            className={`w-full px-2.5 py-2 rounded-xl text-left text-xs transition flex items-center justify-between gap-2 ${
+                              isSelected
+                                ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 font-semibold'
+                                : 'hover:bg-stone-100 dark:hover:bg-slate-700/60 text-stone-700 dark:text-stone-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-base shrink-0">{t.previewIcon}</span>
+                              <div className="min-w-0 truncate">
+                                <span className="block truncate text-xs">{t.name}</span>
+                                <span className="block truncate text-[10px] text-stone-400 font-normal">
+                                  {t.tagline}
+                                </span>
+                              </div>
+                            </div>
+                            <div
+                              className="w-3.5 h-3.5 rounded-full shrink-0 border border-white/50 shadow-xs"
+                              style={{ backgroundColor: t.accent }}
+                            />
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* BOTÃO DE PREFERÊNCIAS COMPLETAS */}
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            title="Ajustes de voz, nome e som ambiente"
-            className="p-2 sm:px-3 sm:py-1.5 rounded-full bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-600 dark:text-stone-300 text-xs font-medium transition flex items-center gap-1.5 border border-stone-200 dark:border-slate-700 shadow-sm active:scale-95 min-h-[36px] min-w-[36px] justify-center"
-          >
-            <Sliders className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
-            <span className="hidden sm:inline">Ajustes</span>
-          </button>
+          {canShowSettings && (
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen(true)}
+              title="Ajustes de voz, nome e som ambiente"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-full bg-white dark:bg-slate-800 hover:bg-stone-100 dark:hover:bg-slate-700 text-stone-600 dark:text-stone-300 text-xs font-medium transition flex items-center gap-1.5 border border-stone-200 dark:border-slate-700 shadow-sm active:scale-95 min-h-[36px] min-w-[36px] justify-center"
+            >
+              <Sliders className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+              <span className="hidden sm:inline">Ajustes</span>
+            </button>
+          )}
         </div>
       </header>
 

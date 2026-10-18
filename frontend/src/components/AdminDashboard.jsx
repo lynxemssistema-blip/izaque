@@ -34,6 +34,7 @@ import {
   Edit3,
   Mail,
   Calendar,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   fetchAdminMetrics,
@@ -62,8 +63,10 @@ import AdminGuidedConversations from './AdminGuidedConversations';
 import AdminUserGroups from './AdminUserGroups';
 import AdminProjectPlanning from './AdminProjectPlanning';
 import AdminCreativeTroubles from './AdminCreativeTroubles';
+import AdminSystemSettings from './AdminSystemSettings';
 
 export default function AdminDashboard({ currentUser }) {
+  const isSuperAdmin = currentUser?.role === 'master' || currentUser?.email === 'edsonmanoel2012@gmail.com';
   const [activeTab, setActiveTab] = useState('metrics'); // 'users' | 'plans' | 'subscriptions' | 'feedbacks' | 'memories' | 'agents' | 'help' | 'broadcast'
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -681,6 +684,20 @@ export default function AdminDashboard({ currentUser }) {
               <HelpCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
               <span>Manual</span>
             </button>
+
+            {isSuperAdmin && (
+              <button
+                onClick={() => setActiveTab('advanced_params')}
+                className={`px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === 'advanced_params'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    : 'text-amber-800 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+                <span className="font-semibold">Parâmetros Avançados</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1797,6 +1814,11 @@ export default function AdminDashboard({ currentUser }) {
         {/* ABA 12: PRONTUÁRIOS E DIAGNÓSTICOS DO INCÔMODO CRIATIVO */}
         {activeTab === 'creative_troubles' && (
           <AdminCreativeTroubles currentUser={currentUser} />
+        )}
+
+        {/* ABA 13: PARÂMETROS AVANÇADOS DO SISTEMA (EXCLUSIVO SUPERADMIN) */}
+        {activeTab === 'advanced_params' && isSuperAdmin && (
+          <AdminSystemSettings currentUser={currentUser} />
         )}
 
         {/* MODAL PARA CRIAR AGENTE */}

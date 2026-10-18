@@ -56,6 +56,8 @@ import {
   notifyTaskReminder,
   runProjectRemindersCheck,
   getProjectNotificationsLog,
+  getSystemSettings,
+  updateSystemSettings,
 } from '../controllers/adminController.js';
 
 const router = Router();
@@ -139,6 +141,11 @@ router.delete('/admin/project/tasks/:id', deleteProjectTask);
 router.post('/admin/project/tasks/:id/notify', notifyTaskReminder);
 router.post('/admin/project/check-reminders', runProjectRemindersCheck);
 router.get('/admin/project/notifications-log', getProjectNotificationsLog);
+
+// Parâmetros Globais e Avançados do Sistema (Superadmin)
+router.get('/system/settings', getSystemSettings);
+router.get('/admin/system/settings', getSystemSettings);
+router.put('/admin/system/settings', updateSystemSettings);
 
 export default router;
 

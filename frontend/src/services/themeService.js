@@ -80,18 +80,18 @@ export function applyAppTheme(themeId) {
     root.classList.remove(`theme-${id}`);
   });
 
-  const targetTheme = VALID_THEME_IDS.includes(themeId) ? themeId : 'emerald';
+  const targetTheme = VALID_THEME_IDS.includes(themeId) ? themeId : 'gold';
   root.classList.add(`theme-${targetTheme}`);
   return targetTheme;
 }
 
 /**
- * Obtém o tema atual salvo localmente
+ * Obtém o tema atual salvo localmente (Padrão: 'gold' - Refúgio Ouro & Obsidiana)
  */
 export function getCurrentTheme() {
-  if (typeof window === 'undefined') return 'emerald';
+  if (typeof window === 'undefined') return 'gold';
   const saved = localStorage.getItem('izaque_app_theme');
-  return VALID_THEME_IDS.includes(saved) ? saved : 'emerald';
+  return VALID_THEME_IDS.includes(saved) ? saved : 'gold';
 }
 
 /**

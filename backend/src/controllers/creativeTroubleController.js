@@ -79,7 +79,7 @@ Responda SEMPRE em formato JSON estrito no seguinte formato:
     const userPrompt = `O usuário descreveu o seguinte incômodo:\n"${rawDescription.trim()}"\n\nExtraia o fato concreto de acordo com a metodologia.`;
 
     const aiResponse = await callGeminiSafe(userPrompt, systemPrompt);
-    
+
     // Tenta fazer o parse JSON
     let parsed;
     try {
@@ -355,7 +355,7 @@ export async function updateCreativeTrouble(req, res) {
   try {
     const { id } = req.params;
     const updates = { ...req.body, updated_at: new Date().toISOString() };
-    
+
     // Não permitir que o usuário comum edite notas do mentor
     if (req.user && req.user.role !== 'master' && req.user.role !== 'admin') {
       delete updates.mentor_notes;
@@ -893,7 +893,7 @@ Responda ESTRITAMENTE em JSON:
         const diagText = await callGeminiSafe(diagPrompt);
         const parsedDiag = JSON.parse(diagText.replace(/```json/gi, '').replace(/```/g, '').trim());
         diagnosis = { ...diagnosis, ...parsedDiag };
-      } catch (e) {}
+      } catch (e) { }
 
       data.ai_diagnosis = diagnosis;
 

@@ -15,6 +15,7 @@ export default function Navbar({
   onOpenProfile,
   onOpenSettings,
   onOpenFeedback,
+  systemSettings,
 }) {
   const isMasterOrAdmin = profile?.role === 'master' || profile?.role === 'admin';
   const [guideName, setGuideName] = useState(() => {
@@ -144,81 +145,83 @@ export default function Navbar({
         {/* ÁREA DO USUÁRIO OU ENTRADA */}
         <div className="flex items-center space-x-1.5 sm:space-x-2.5">
           {/* SELETOR RÁPIDO DE TEMA VISUAL (PC & DESKTOP) */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsThemeMenuOpen((prev) => !prev)}
-              title={`Mudar Estilo Visual (Atual: ${THEMES.find((t) => t.id === currentTheme)?.name || 'Esmeralda'})`}
-              className={`p-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                isThemeMenuOpen
-                  ? 'bg-teal-700/15 text-teal-800 dark:text-teal-300 ring-1 ring-teal-500/40'
-                  : 'text-stone-500 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Palette className="w-4 h-4" />
-              <span className="hidden xl:inline text-xs font-serif">
-                {THEMES.find((t) => t.id === currentTheme)?.name.split(' ')[1] || 'Tema'}
-              </span>
-            </button>
+          {(systemSettings ? systemSettings.show_theme_selector !== false : true) && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsThemeMenuOpen((prev) => !prev)}
+                title={`Mudar Estilo Visual (Atual: ${THEMES.find((t) => t.id === currentTheme)?.name || 'Esmeralda'})`}
+                className={`p-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                  isThemeMenuOpen
+                    ? 'bg-teal-700/15 text-teal-800 dark:text-teal-300 ring-1 ring-teal-500/40'
+                    : 'text-stone-500 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-stone-200/60 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Palette className="w-4 h-4" />
+                <span className="hidden xl:inline text-xs font-serif">
+                  {THEMES.find((t) => t.id === currentTheme)?.name.split(' ')[1] || 'Tema'}
+                </span>
+              </button>
 
-            {isThemeMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsThemeMenuOpen(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 p-2 rounded-2xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 shadow-2xl z-50 space-y-1 text-stone-800 dark:text-stone-100">
-                  <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-                    Estilos Visuais
-                  </div>
-                  {THEMES.map((t) => {
-                    const isSelected = currentTheme === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => {
-                          saveAppTheme(t.id);
-                          setCurrentTheme(t.id);
-                          setIsThemeMenuOpen(false);
-                          if (user?.id) {
-                            updateUserProfile(user.id, {
-                              preferences: {
-                                ...(user.preferences || {}),
-                                app_theme: t.id,
-                              },
-                            }).catch(() => {});
-                          }
-                        }}
-                        className={`w-full px-2.5 py-2 rounded-xl text-left text-xs transition flex items-center justify-between gap-2 cursor-pointer ${
-                          isSelected
-                            ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 font-semibold'
-                            : 'hover:bg-stone-100 dark:hover:bg-slate-700/60 text-stone-700 dark:text-stone-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-base shrink-0">{t.previewIcon}</span>
-                          <div className="min-w-0 truncate">
-                            <span className="block truncate text-xs">{t.name}</span>
-                            <span className="block truncate text-[10px] text-stone-400 font-normal">
-                              {t.tagline}
-                            </span>
+              {isThemeMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsThemeMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 p-2 rounded-2xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 shadow-2xl z-50 space-y-1 text-stone-800 dark:text-stone-100">
+                    <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                      Estilos Visuais
+                    </div>
+                    {THEMES.map((t) => {
+                      const isSelected = currentTheme === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            saveAppTheme(t.id);
+                            setCurrentTheme(t.id);
+                            setIsThemeMenuOpen(false);
+                            if (user?.id) {
+                              updateUserProfile(user.id, {
+                                preferences: {
+                                  ...(user.preferences || {}),
+                                  app_theme: t.id,
+                                },
+                              }).catch(() => {});
+                            }
+                          }}
+                          className={`w-full px-2.5 py-2 rounded-xl text-left text-xs transition flex items-center justify-between gap-2 cursor-pointer ${
+                            isSelected
+                              ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 font-semibold'
+                              : 'hover:bg-stone-100 dark:hover:bg-slate-700/60 text-stone-700 dark:text-stone-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">{t.previewIcon}</span>
+                            <div className="min-w-0 truncate">
+                              <span className="block truncate text-xs">{t.name}</span>
+                              <span className="block truncate text-[10px] text-stone-400 font-normal">
+                                {t.tagline}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <div
-                          className="w-3.5 h-3.5 rounded-full shrink-0 border border-white/50 shadow-xs"
-                          style={{ backgroundColor: t.accent }}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
+                          <div
+                            className="w-3.5 h-3.5 rounded-full shrink-0 border border-white/50 shadow-xs"
+                            style={{ backgroundColor: t.accent }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* BOTÃO DE PREFERÊNCIAS SENSORIAIS (PC & DESKTOP) */}
-          {onOpenSettings && (
+          {onOpenSettings && (systemSettings ? systemSettings.show_settings_button !== false : true) && (
             <button
               type="button"
               onClick={onOpenSettings}
